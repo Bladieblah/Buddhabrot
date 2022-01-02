@@ -10,12 +10,6 @@
 #include <algorithm>
 #include <iostream>
 
-// #ifdef __APPLE__
-// #include <OpenCL/opencl.h>
-// #else
-// #include <CL/cl.h>
-// #endif
-
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
 #include <GLUT/glut.h>
@@ -34,21 +28,6 @@
 uint64_t iterCount = 0;
 
 int particleX, particleY;
-
-// OpenCL initialisation
-// cl_platform_id platform_id = NULL;
-// cl_device_id device_id = NULL;
-// cl_context context = NULL;
-// cl_command_queue command_queue = NULL;
-
-// cl_mem mapmobj = NULL;
-// cl_mem datamobj = NULL;
-
-// cl_program program = NULL;
-// cl_kernel kernel = NULL;
-// cl_uint ret_num_devices;
-// cl_uint ret_num_platforms;
-// cl_int ret;
 
 size_t source_size;
 char *source_str;
@@ -78,7 +57,6 @@ bool transform = true;
 bool withColormap = false;
 bool showColorBar = true;
 bool shouldDrawGrid = false;
-bool shouldDisplayPoints = false;
 bool targetedRandom = false;
 bool naiveBuddha = true;
 bool showDifference = false;
@@ -133,41 +111,6 @@ double *xSamples;
 double *ySamples;
 int sampleSizeX = 6000;
 int sampleSizeY = 5000;
-
-// Node for sampling points.
-// children:
-// 3 | 0
-// 2 | 1
-typedef struct TreeNode {
-    double xc, yc;
-    double sizeX, sizeY, radius;
-    int depth;
-
-    int hitCount = 0;
-    int pathlen = 0;
-    bool isLeaf = true;
-    double dist = 0;
-    int c0 = 0;
-    int c1 = 0;
-    int c2 = 0;
-    int c3 = 0;
-
-    TreeNode() {}
-
-    TreeNode(double _xc, double _yc, double _sizeX, double _sizeY, int _depth) {
-        xc = _xc;
-        yc = _yc;
-        sizeX = _sizeX;
-        sizeY = _sizeY;
-        depth = _depth;
-
-        radius = sqrt(sizeX * sizeX + sizeY * sizeY);
-    }
-} TreeNode;
-
-TreeNode *startPoints;
-double *CDF;
-int pointCount;
 
 // Points to track
 typedef struct Particle {
@@ -485,46 +428,6 @@ void processContrib() {
     }
 }
 
-MandelCoord newRandom() {
-    MandelCoord result;
-
-    if (pointCount > 0) {
-        double r = UNI();
-        int lo = 0, hi = pointCount - 1, mid;
-        double down = CDF[lo], up = CDF[hi], test;
-
-        for (int i=0; i<20; i++) {
-            mid = (hi + lo) / 2;
-            test = CDF[mid];
-
-            if (test < r) {
-                lo = mid;
-                down  = test;
-            }
-            else if (test > r) {
-                hi = mid;
-                up = test;
-            }
-            else {
-                break;
-            }
-
-            if (lo == hi) {
-                break;
-            }
-        }
-
-        result.x = startPoints[mid].xc + RANDN() * startPoints[mid].dist;
-        result.y = startPoints[mid].yc + RANDN() * startPoints[mid].dist;
-        return result;
-    }
-    
-    result.x = 4.5 * UNI() - 2.6;
-    result.y = 3.0 * UNI() - 1.5;
-    
-    return result;
-}
-
 MandelCoord mutateParticle(int thread, int particle) {
     MandelCoord result;
 
@@ -535,33 +438,28 @@ MandelCoord mutateParticle(int thread, int particle) {
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
     else {
-        if (targetedRandom) {
-            result = newRandom();
-        }
-        else {
-            // result.x = 4.5 * UNI() - 2.6;
-            // result.y = 3.0 * UNI() - 1.5;
-            int si = UNI() * sampleSizeX;
-            int sj = UNI() * sampleSizeY;
-            double r, rx, ry;
+        // result.x = 4.5 * UNI() - 2.6;
+        // result.y = 3.0 * UNI() - 1.5;
+        int si = UNI() * sampleSizeX;
+        int sj = UNI() * sampleSizeY;
+        double r, rx, ry;
 
-            if (si == 0)
-                rx = fabs(xSamples[sampleSizeX * sj + (si + 1)] - xSamples[sampleSizeX * sj + si]);
-            else
-                rx = fabs(xSamples[sampleSizeX * sj + (si - 1)] - xSamples[sampleSizeX * sj + si]);
+        if (si == 0)
+            rx = fabs(xSamples[sampleSizeX * sj + (si + 1)] - xSamples[sampleSizeX * sj + si]);
+        else
+            rx = fabs(xSamples[sampleSizeX * sj + (si - 1)] - xSamples[sampleSizeX * sj + si]);
 
-            if (sj == 0)
-                ry = fabs(xSamples[sampleSizeX * (sj + 1) + si] - xSamples[sampleSizeX * sj + si]);
-            else
-                ry = fabs(xSamples[sampleSizeX * (sj - 1) + si] - xSamples[sampleSizeX * sj + si]);
+        if (sj == 0)
+            ry = fabs(xSamples[sampleSizeX * (sj + 1) + si] - xSamples[sampleSizeX * sj + si]);
+        else
+            ry = fabs(xSamples[sampleSizeX * (sj - 1) + si] - xSamples[sampleSizeX * sj + si]);
 
+        r = fmax(rx, ry);
+        if (r == 0) {
             r = fmax(rx, ry);
-            if (r == 0) {
-                r = fmax(rx, ry);
-            }
-            result.x = xSamples[sampleSizeX * sj + si] + RANDN() * r;
-            result.y = ySamples[sampleSizeX * sj + si] + RANDN() * r;
         }
+        result.x = xSamples[sampleSizeX * sj + si] + RANDN() * r;
+        result.y = ySamples[sampleSizeX * sj + si] + RANDN() * r;
     }
 
     return result;
@@ -714,127 +612,6 @@ double computeDistance(int pathLength) {
     return dist;
 }
 
-void iterateNode(TreeNode &node, std::vector<TreeNode> &tree, int minDepth, int maxDepth);
-
-void makeChildren(TreeNode node, std::vector<TreeNode> &tree, int minDepth=0, int maxDepth=0) {
-    double halfSizeX = node.sizeX / 2.;
-    double halfSizeY = node.sizeY / 2.;
-    TreeNode child;
-
-    node.isLeaf = false;
-
-    node.c0 = tree.size();
-    child = TreeNode(node.xc + halfSizeX, node.yc + halfSizeY, halfSizeX, halfSizeY, node.depth + 1);
-    tree.push_back(child);
-    iterateNode(tree.back(), tree, minDepth, maxDepth);
-    
-    node.c1 = tree.size();
-    child = TreeNode(node.xc + halfSizeX, node.yc - halfSizeY, halfSizeX, halfSizeY, node.depth + 1);
-    tree.push_back(child);
-    iterateNode(tree.back(), tree, minDepth, maxDepth);
-    
-    node.c2 = tree.size();
-    child = TreeNode(node.xc - halfSizeX, node.yc - halfSizeY, halfSizeX, halfSizeY, node.depth + 1);
-    tree.push_back(child);
-    iterateNode(tree.back(), tree, minDepth, maxDepth);
-    
-    node.c3 = tree.size();
-    child = TreeNode(node.xc - halfSizeX, node.yc + halfSizeY, halfSizeX, halfSizeY, node.depth + 1);
-    tree.push_back(child);
-    iterateNode(tree.back(), tree, minDepth, maxDepth);
-}
-
-void iterateNode(TreeNode &node, std::vector<TreeNode> &tree, int minDepth, int maxDepth) {
-    Particle result = converge(node.xc, node.yc, 0, 0);
-    node.hitCount = result.hitCount;
-    node.pathlen = result.len;
-    node.dist = computeDistance(result.len);
-
-    if (node.depth < minDepth || (node.depth < maxDepth && node.dist < 8 * node.radius)) {
-        if (node.pathlen > thresholds[0]) {
-            makeChildren(node, tree, minDepth, maxDepth);
-        }
-        else {
-            node.isLeaf = false;
-        }
-    }
-}
-
-bool treeNodeSort(const TreeNode &n1, const TreeNode &n2) {
-    return n1.hitCount < n2.hitCount;
-}
-
-void sortNodes(TreeNode *nodes, int len) {
-    std::sort(nodes, nodes + len, &treeNodeSort);
-}
-    
-void computeStartingPoints() {
-    int i;
-    int minDepth = 8;
-    int maxDepth = 12 - (int)(1. * log(scale));
-    int minSize = 100000;
-
-    std::vector<TreeNode> tree;
-
-    TreeNode root(-0.5, 0., 2., 1.3, 0);
-    tree.push_back(root);
-
-    iterateNode(root, tree, minDepth, maxDepth);
-
-    for (i=0; i<20; i++) {
-        if (tree.size() >= minSize) {
-            break;
-        }
-
-        size_t curSize = tree.size();
-        for (size_t j=0; j<curSize; j++) {
-            if (tree[j].isLeaf && tree[j].dist < 10 * tree[j].radius) {
-                makeChildren(tree[j], tree);
-            }
-        }
-    }
-
-    if (pointCount > 0) {
-        free(startPoints);
-        free(CDF);
-    }
-
-    pointCount = 0;
-    int totalHits = 0;
-    for (const auto &node: tree) {
-        // if (node.hitCount > 0) {
-        if (node.hitCount > 0 || node.dist < fmax(10 * scale, 1e-2)) {
-            pointCount += 2;
-            totalHits += (pow(node.hitCount, 2) + scale / fmax(scale, node.dist)) * 2;
-            totalHits += pow(node.hitCount, 2);
-        }
-    }
-
-    fprintf(stderr, "Found %d valid starting points\n", pointCount);
-
-    startPoints = (TreeNode *)malloc(pointCount * sizeof(TreeNode));
-    CDF = (double *)malloc(pointCount * sizeof(double));
-    i = 0;
-    for (const auto &node: tree) {
-        // if (node.hitCount > 0) {
-        if (node.hitCount > 0 || node.dist < fmax(10 * scale, 1e-2)) {
-            startPoints[i] = node;
-            i++;
-            startPoints[i] = node;
-            startPoints[i].yc *= -1;
-            i++;
-        }
-    }
-
-    sortNodes(startPoints, pointCount);
-    double weight = 1. / totalHits;
-    CDF[0] = 0;
-    for (i=1; i<pointCount; i++) {
-        // CDF[i] = CDF[i-1] + pow(startPoints[i-1].hitCount, 2) + scale / fmax(scale, startPoints[i-1].dist) * weight;
-        CDF[i] = CDF[i-1] + (pow(startPoints[i-1].hitCount, 2) + scale / fmax(scale, startPoints[i-1].dist)) * weight;
-    }
-}
-
 // Functions
 
 void makeColourmap() {
@@ -875,23 +652,8 @@ void makeColourmap() {
     // ret = clEnqueueWriteBuffer(command_queue, mapmobj, CL_TRUE, 0, 3*nColours*sizeof(float), colourMap, 0, NULL, NULL);
 }
 
-void setKernelArgs() {
-//     ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), (void *)&rootmobj);
-}
-
 void prepare() {
-    // FILE *fp;
-    // const char fileName[] = "./shaders/sample.cl";
     pcg32_srandom(time(NULL) ^ (intptr_t)&printf, (intptr_t)&kmax); // Seed pcg
-    
-    // fp = fopen(fileName, "r");
-    // if (!fp) {
-    //     fprintf(stderr, "Failed to load kernel.\n");
-    //     exit(1);
-    // }
-    // source_str = (char *)malloc(MAX_SOURCE_SIZE);
-    // source_size = fread(source_str, 1, MAX_SOURCE_SIZE, fp);
-    // fclose(fp);
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));
@@ -905,59 +667,9 @@ void prepare() {
     }
 
     srand(time(NULL));
-    
-    /* Get Platform/Device Information */
-    // ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-    // ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, &ret_num_devices);
-
-    // /* Create OpenCL Context */
-    // context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &ret);
-    // if (ret != CL_SUCCESS)
-    //   fprintf(stderr, "Failed on function clCreateContext: %d\n", ret);
-
-    // /* Create command queue */
-    // command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
-
-    // /* Create Buffer Object */
-    // mapmobj  = clCreateBuffer(context, CL_MEM_READ_WRITE, 3*nColours*sizeof(float), NULL, &ret);
-    // datamobj = clCreateBuffer(context, CL_MEM_READ_WRITE, 3*size_x*size_y*sizeof(unsigned int), NULL, &ret);
-
-    // /* Create kernel program from source file*/
-    // program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &ret);
-    // if (ret != CL_SUCCESS)
-    //   fprintf(stderr, "Failed on function clCreateProgramWithSource: %d\n", ret);
-    
-    // ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
-    // if (ret != CL_SUCCESS)
-    //   fprintf(stderr, "Failed on function clBuildProgram: %d\n", ret);
-    
-    // size_t len = 10000;
-    // ret = clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &len);
-    // char *buffer = (char *)calloc(len, sizeof(char));
-    // ret = clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, len, buffer, NULL);
-    // fprintf(stderr, "%s\n", buffer);
-
-    // /* Create data parallel OpenCL kernel */
-    // kernel = clCreateKernel(program, "sample", &ret);
-    // if (ret != CL_SUCCESS)
-    //   fprintf(stderr, "Failed on function clCreateKernel: %d\n", ret);
-    // setKernelArgs();
 }
 
 void cleanup() {
-    /* Finalization */
-//     ret = clFlush(command_queue);
-//     ret = clFinish(command_queue);
-//     ret = clReleaseKernel(kernel);
-//     ret = clReleaseProgram(program);
-    
-// //     ret = clReleaseMemObject(rootmobj);
-//     ret = clReleaseMemObject(mapmobj);
-//     ret = clReleaseMemObject(datamobj);
-    
-//     ret = clReleaseCommandQueue(command_queue);
-//     ret = clReleaseContext(context);
-
     free(colourMap);
     // free(fractal);
     free(source_str);
@@ -966,23 +678,6 @@ void cleanup() {
 
     free(xSamples);
     free(ySamples);
-}
-
-void stepCL() {
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-
-//     ret = clEnqueueWriteBuffer(command_queue, rootmobj, CL_TRUE, 0, 2*nRoots*sizeof(float), roots, 0, NULL, NULL);
-    
-// 	ret = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL, global_item_size, NULL, 0, NULL, NULL);
-    // if (ret != CL_SUCCESS) {
-    //   fprintf(stderr, "Failed on function clEnqueueNDRangeKernel: %d\n", ret);
-    // }
-    
-//     ret = clEnqueueReadBuffer(command_queue, datamobj, CL_TRUE, 0, 3*size_x*size_y*sizeof(unsigned int), data, 0, NULL, NULL);
-    
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-    fprintf(stderr, "step time = %.3g\n", time_span.count());
 }
 
 void step() {
@@ -1039,27 +734,6 @@ void drawGrid() {
         glVertex2f(0.5,-1); glVertex2f(0.5,1);
         glVertex2f(-0.5,-1); glVertex2f(-0.5,1);
     glEnd();
-}
-
-void displayStartPoints() {
-    if (pointCount == 0) {
-        return;
-    }
-
-    glColor4f(0.7, 0., 1., 1.);
-
-    glPointSize(3);
-    glEnable(GL_POINT_SMOOTH);
-    glBegin(GL_POINTS);
-    for (int i=0; i<pointCount; i++) {
-        glVertex2f(
-            (startPoints[i].xc + 0.5) / 2., 
-            startPoints[i].yc / 1.3
-        );
-    }
-    glEnd();
-
-    glColor4f(1., 1., 1., 1.);
 }
 
 void display() {
@@ -1120,10 +794,6 @@ void display() {
 
         if (shouldDrawGrid) {
             drawGrid();
-        }
-
-        if (shouldDisplayPoints) {
-            displayStartPoints();
         }
 
         if (mouse_state == GLUT_DOWN) {
@@ -1316,7 +986,6 @@ void setCoordinates(double _scale, double _theta, double _dx, double _dy) {
     echo("Done");
 
     updateFractalVars();
-    computeStartingPoints();
 
     clearData();
     initParticles();
@@ -1360,24 +1029,18 @@ void revertCoordinates() {
         echo("\nInitialising particles");
         initParticles();
         echo("Done");
-        computeStartingPoints();
     }
 }
 
-void printParticles() {
-    
-}
 
 void keyPressed(unsigned char key, int x, int y) {
     switch (key) {
         case 'w':
             viewScale *= 1.5;
-//             ret = clSetKernelArg(kernel, 4, sizeof(double), &scale);
             step();
             break;
         case 's':
             viewScale /= 1.5;
-//             ret = clSetKernelArg(kernel, 4, sizeof(double), &scale);
             step();
             break;
         case 'p':
@@ -1404,7 +1067,6 @@ void keyPressed(unsigned char key, int x, int y) {
             shouldDrawGrid = !shouldDrawGrid;
             break;
         case 'o':
-            printParticles();
             fprintf(stderr, "\nmaxVal = %llu, pixSum = %llu", maxVal, pixSum);
             for (int k=0; k<thresholdCount; k++){
                 fprintf(stderr, ", maxval %d = %llu", k, maxVals[k]);
@@ -1442,9 +1104,6 @@ void keyPressed(unsigned char key, int x, int y) {
             targetedRandom = !targetedRandom;
             fprintf(stderr, "Set targetedRandom to %d\n", targetedRandom);
             // clearData();
-            break;
-        case 'k':
-            shouldDisplayPoints = !shouldDisplayPoints;
             break;
         case 'x':
             segmented = !segmented;
@@ -1536,7 +1195,6 @@ int main(int argc, char **argv) {
     makeColourmap();
     particleX = size_x / (double)particleCountSqrt + 0.99;
     particleY = size_y / (double)particleCountSqrt + 0.99;
-    computeStartingPoints();
     initParticles();
     // readData();
     
