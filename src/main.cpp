@@ -24,10 +24,11 @@
 #define iterations 20
 #define particleCountSqrt 20
 #define particleCount (particleCountSqrt * particleCountSqrt)
-#define threadCount 6
+#define threadCount 4
 uint64_t iterCount = 0;
 
 int particleX, particleY;
+int window1, window2;
 
 size_t source_size;
 char *source_str;
@@ -35,6 +36,7 @@ char *source_str;
 // Array to be drawn
 #define uint32_max 4294967294
 uint32_t data[size_y * size_x * 3];
+uint32_t data2[size_y * size_x * 3];
 
 // Colourmap stuff
 uint32_t *colourMap;
@@ -428,6 +430,39 @@ void processContrib() {
     }
 }
 
+void processContrib2() {
+    int i, j, ind, colInd;
+
+    double thr = (double)maxContrib;
+
+    for (i=0; i<size_x; i++) {
+        for (j=0; j<size_y; j++) {
+            ind = size_x * j + i;
+
+            if (showColorBar && i < 70) {
+                ind *= 3;
+                colInd = 3 * (int)(j / (double)size_y * nColours);
+                data2[ind + 0] = colourMap[colInd + 0];
+                data2[ind + 1] = colourMap[colInd + 1];
+                data2[ind + 2] = colourMap[colInd + 2];
+                continue;
+            }
+
+            if (!showDifference) {
+                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
+            }
+            else {
+                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
+            }
+
+            ind *= 3;
+            for (int k=0; k<3; k++) {
+                data2[ind + k] = colourMap[colInd + k];
+            }
+        }
+    }
+}
+
 MandelCoord mutateParticle(int thread, int particle) {
     MandelCoord result;
 
@@ -737,6 +772,7 @@ void drawGrid() {
 }
 
 void display() {
+    glutSetWindow(window1);
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     step();
     iterCount += iterations * threadCount;
@@ -980,15 +1016,16 @@ void setCoordinates(double _scale, double _theta, double _dx, double _dy) {
     dy = _dy;
 
     viewIndex++;
+
+    echo("Updating fractal vars");
+    updateFractalVars();
+
+    echo("Clearing data");
+    clearData();
     
     echo("Initialising particles");
     initParticles();
     echo("Done");
-
-    updateFractalVars();
-
-    clearData();
-    initParticles();
 }
 
 void selectRegion() {
@@ -1189,6 +1226,90 @@ void reshape(int w, int h)
     fprintf(stderr, "\nNew size = (%d, %d)\n", w, h);
 }
 
+void display2() {
+    glutSetWindow(window2);
+    processContrib2();
+
+    if (updateTexture) {
+        glClearColor( 0, 0, 0, 1 );
+        glColor3f(1, 1, 1);
+        glClear( GL_COLOR_BUFFER_BIT );
+
+        glEnable (GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+        glTexImage2D (
+            GL_TEXTURE_2D,
+            0,
+            GL_RGB,
+            size_x,
+            size_y,
+            0,
+            GL_RGB,
+            GL_UNSIGNED_INT,
+            &data2[0]
+        );
+
+        glPushMatrix();
+        glScalef(viewScale, viewScale, 1.);
+        glTranslatef(-viewX, -viewY, 0.);
+
+        glBegin(GL_QUADS);
+            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
+            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
+            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
+            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
+        glEnd();
+
+        glDisable (GL_TEXTURE_2D);
+        glPopMatrix();
+
+        if (shouldDrawGrid) {
+            drawGrid();
+        }
+
+        // if (mouse_state == GLUT_DOWN) {
+            // drawBox();
+        // }
+        glFlush();
+        glutSwapBuffers();
+    }
+    
+}
+
+void displayAll() {
+    display();
+    display2();
+}
+
+void createWindow1() {
+    glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
+    glutInitWindowSize( windowW, windowH );
+    window1 = glutCreateWindow( "Buddhabrot Main" );
+    
+    glutDisplayFunc(&display);
+    // glutIdleFunc(&display);
+    glutKeyboardFunc(&keyPressed);
+    glutSpecialFunc(&specialKeyPressed);
+    glutMouseFunc(mouseFunc);
+    glutMotionFunc(&motionFunc);
+    glutReshapeFunc(&reshape);
+}
+
+void createWindow2() {
+    glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
+    glutInitWindowSize( windowW, windowH );
+    window2 = glutCreateWindow( "Buddhabrot Contrib");
+    
+    glutDisplayFunc(&display2);
+    // glutIdleFunc(&display2);
+    // glutKeyboardFunc(&keyPressed);
+    // glutSpecialFunc(&specialKeyPressed);
+    // glutMouseFunc(mouseFunc);
+    // glutMotionFunc(&motionFunc);
+    // glutReshapeFunc(&reshape);
+}
+
 int main(int argc, char **argv) {
     prepare();
     readSamples();
@@ -1196,24 +1317,13 @@ int main(int argc, char **argv) {
     particleX = size_x / (double)particleCountSqrt + 0.99;
     particleY = size_y / (double)particleCountSqrt + 0.99;
     initParticles();
-    // readData();
     
-	glutInit( &argc, argv );
-    glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize( windowW, windowH );
-    glutCreateWindow( "Hello World" );
-    glutDisplayFunc( display );
-    
-    glutDisplayFunc(&display);
-    glutIdleFunc(&display);
-    glutKeyboardFunc(&keyPressed);
-    glutSpecialFunc(&specialKeyPressed);
-    glutMouseFunc(mouseFunc);
-    glutMotionFunc(&motionFunc);
-    glutReshapeFunc(&reshape);
-    
-    step();
-    display();
+	glutInit(&argc, argv);
+    createWindow1();
+    createWindow2();
+
+    glutIdleFunc(&displayAll);
+
     glutMainLoop();
 
     return 0;
