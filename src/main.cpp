@@ -36,7 +36,7 @@ char *source_str;
 // Array to be drawn
 #define uint32_max 4294967294
 uint32_t data[size_y * size_x * 3];
-uint32_t data2[size_y * size_x * 3];
+uint32_t *data2;
 
 // Colourmap stuff
 uint32_t *colourMap;
@@ -52,6 +52,9 @@ int mouse_y_down, mouse_y_up;
 int mouse_state_1 = GLUT_UP;
 int mouse_state_2 = GLUT_UP;
 
+int mouse_x2 = 0;
+int mouse_y2 = 0;
+
 // Mandelbrot config
 int kmax = 800;
 double escape = 9;
@@ -66,7 +69,9 @@ bool showDifference = false;
 bool segmented = true;
 bool showContrib = false;
 bool updateTexture = true;
-bool onlyBackground =  false;
+bool onlyBackground = false;
+
+bool move2 = true;
 
 
 #define thresholdCount 3
@@ -91,7 +96,7 @@ uint64_t frameFractal2[size_y * size_x] = {0};
 uint64_t maxVal = 0;
 uint64_t pixSum = 0;
 
-double fractalContrib[size_y * size_x];
+double *fractalContrib;
 double maxContrib = 0;
 
 std::chrono::high_resolution_clock::time_point frameTime = std::chrono::high_resolution_clock::now();
@@ -294,8 +299,8 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                 pixCount += hitCount;
                 pixSum += pixCount;
 
-                int sourceInd = size_x * (int)(size_y * ((b + 1.3) / 2.6)) + (int)(size_x * ((a + 2.5) / 4.));
-                if (sourceInd >= 0 && sourceInd < size_y * size_x) {
+                int sourceInd = 2 * size_x * (int)(2 * size_y * ((b + 1.3) / 2.6)) + (int)(2 * size_x * ((a + 2.5) / 4.));
+                if (sourceInd >= 0 && sourceInd < 4 * size_y * size_x) {
                     fractalContrib[sourceInd] += impact;
 
                     if (fractalContrib[sourceInd] > maxContrib) {
@@ -398,63 +403,58 @@ void processFractal2() {
     }
 }
 
-void processContrib() {
-    int i, j, ind, colInd;
+// void processContrib() {
+//     int i, j, ind, colInd;
 
-    double thr = (double)maxContrib;
+//     double thr = (double)maxContrib;
 
-    for (i=0; i<size_x; i++) {
-        for (j=0; j<size_y; j++) {
-            ind = size_x * j + i;
+//     for (i=0; i<size_x; i++) {
+//         for (j=0; j<size_y; j++) {
+//             ind = size_x * j + i;
 
-            if (showColorBar && i < 70) {
-                ind *= 3;
-                colInd = 3 * (int)(j / (double)size_y * nColours);
-                data[ind + 0] = colourMap[colInd + 0];
-                data[ind + 1] = colourMap[colInd + 1];
-                data[ind + 2] = colourMap[colInd + 2];
-                continue;
-            }
+//             if (showColorBar && i < 70) {
+//                 ind *= 3;
+//                 colInd = 3 * (int)(j / (double)size_y * nColours);
+//                 data[ind + 0] = colourMap[colInd + 0];
+//                 data[ind + 1] = colourMap[colInd + 1];
+//                 data[ind + 2] = colourMap[colInd + 2];
+//                 continue;
+//             }
 
-            if (!showDifference) {
-                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-            }
-            else {
-                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-            }
+//             if (!showDifference) {
+//                 colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
+//             }
+//             else {
+//                 colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
+//             }
 
-            ind *= 3;
-            for (int k=0; k<3; k++) {
-                data[ind + k] = colourMap[colInd + k];
-            }
-        }
-    }
-}
+//             ind *= 3;
+//             for (int k=0; k<3; k++) {
+//                 data[ind + k] = colourMap[colInd + k];
+//             }
+//         }
+//     }
+// }
 
 void processContrib2() {
     int i, j, ind, colInd;
 
     double thr = (double)maxContrib;
 
-    for (i=0; i<size_x; i++) {
-        for (j=0; j<size_y; j++) {
-            ind = size_x * j + i;
+    for (i=0; i<2*size_x; i++) {
+        for (j=0; j<2*size_y; j++) {
+            ind = 2 * size_x * j + i;
 
             if (showColorBar && i < 70) {
                 ind *= 3;
-                colInd = 3 * (int)(j / (double)size_y * nColours);
+                colInd = 3 * (int)(j / (double)(2 * size_y) * nColours);
                 data2[ind + 0] = colourMap[colInd + 0];
                 data2[ind + 1] = colourMap[colInd + 1];
                 data2[ind + 2] = colourMap[colInd + 2];
                 continue;
             }
 
-            if (!showDifference) {
-                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-            }
-            else {
-                colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-            }
+            colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
 
             ind *= 3;
             for (int k=0; k<3; k++) {
@@ -690,6 +690,9 @@ void makeColourmap() {
 
 void prepare() {
     pcg32_srandom(time(NULL) ^ (intptr_t)&printf, (intptr_t)&kmax); // Seed pcg
+
+    data2 = (uint32_t *)malloc(12 * size_x * size_y * sizeof(uint32_t));
+    fractalContrib = (double *)malloc(4 * size_x * size_y * sizeof(double));
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));
@@ -706,8 +709,10 @@ void prepare() {
 }
 
 void cleanup() {
+    free(data2);
+
     free(colourMap);
-    // free(fractal);
+    free(fractalContrib);
     free(source_str);
     free(path);
     free(ppath);
@@ -728,10 +733,10 @@ void step() {
 
     mandelbrot();
 
-    if (showContrib) {
-        processContrib();
-    }
-    else 
+    // if (showContrib) {
+        // processContrib();
+    // }
+    // else 
     if (withColormap) {
         processFractal2();
     }
@@ -1177,10 +1182,10 @@ void keyPressed2(unsigned char key, int x, int y) {
             glutSetWindow(window2);
             glutPostRedisplay();
             break;
-        // case 't':
-        //     transform = !transform;
-        //     fprintf(stderr, "Set transform to %d\n", transform);
-        //     break;
+        case 't':
+            move2 = !move2;
+            fprintf(stderr, "Set move2 to %d\n", move2);
+            break;
         case 'm':
             drawScale *= 1.1;
             drawPower = 1. / drawScale;
@@ -1243,6 +1248,9 @@ void mouseFunc1(int button, int state, int x, int y) {
 }
 
 void mouseFunc2(int button, int state, int x, int y) {
+    mouse_x2 = x;
+    mouse_y2 = y;
+
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
         // fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
@@ -1266,6 +1274,11 @@ void mouseFunc2(int button, int state, int x, int y) {
 void motionFunc(int x, int y) {
     mouse_x_up = x;
     mouse_y_up = y;
+}
+
+void motionFunc2(int x, int y) {
+    mouse_x2 = x;
+    mouse_y2 = y;
 }
 
 void reshape(int w, int h)
@@ -1311,8 +1324,8 @@ void display2() {
             GL_TEXTURE_2D,
             0,
             GL_RGB,
-            size_x,
-            size_y,
+            2 * size_x,
+            2 * size_y,
             0,
             GL_RGB,
             GL_UNSIGNED_INT,
