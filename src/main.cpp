@@ -49,7 +49,8 @@ size_t local_item_size[2] = {(size_t)size_x, (size_t)size_y};
 // Mouse
 int mouse_x_down, mouse_x_up;
 int mouse_y_down, mouse_y_up;
-int mouse_state = GLUT_UP;
+int mouse_state_1 = GLUT_UP;
+int mouse_state_2 = GLUT_UP;
 
 // Mandelbrot config
 int kmax = 800;
@@ -740,14 +741,14 @@ void step() {
 }
 
 void drawBox() {
-    double xc = 2 * mouse_x_down / (double)windowW - 1;
-    double yc = 1 - 2 * mouse_y_down / (double)windowH;
+    double xc = 2 * mouse_x_down / (double)windowW1 - 1;
+    double yc = 1 - 2 * mouse_y_down / (double)windowH1;
 
-    double dx1 = 2 * (mouse_x_up - mouse_x_down) / (double)windowW;
-    double dy1 = -2 * (mouse_y_up - mouse_y_down) / (double)windowH;
+    double dx1 = 2 * (mouse_x_up - mouse_x_down) / (double)windowW1;
+    double dy1 = -2 * (mouse_y_up - mouse_y_down) / (double)windowH1;
 
-    double dx2 = 2 * (mouse_y_up - mouse_y_down) * ratio_xy / windowW;
-    double dy2 = 2 * (mouse_x_up - mouse_x_down) * ratio_xy / windowH;
+    double dx2 = 2 * (mouse_y_up - mouse_y_down) * ratio_xy / windowW1;
+    double dy2 = 2 * (mouse_x_up - mouse_x_down) * ratio_xy / windowH1;
 
     glColor4f(1,1,1,1);
 
@@ -815,8 +816,8 @@ void display() {
         );
 
         glPushMatrix();
-        glScalef(viewScale, viewScale, 1.);
-        glTranslatef(-viewX, -viewY, 0.);
+        glScalef(viewScale1, viewScale1, 1.);
+        glTranslatef(-viewX1, -viewY1, 0.);
 
         glBegin(GL_QUADS);
             glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
@@ -832,7 +833,7 @@ void display() {
             drawGrid();
         }
 
-        if (mouse_state == GLUT_DOWN) {
+        if (mouse_state_1 == GLUT_DOWN) {
             drawBox();
         }
         glFlush();
@@ -1029,7 +1030,7 @@ void setCoordinates(double _scale, double _theta, double _dx, double _dy) {
 }
 
 void selectRegion() {
-    if (!transform || mouse_state != GLUT_DOWN) {
+    if (!transform || mouse_state_1 != GLUT_DOWN) {
         return;
     }
 
@@ -1069,22 +1070,16 @@ void revertCoordinates() {
     }
 }
 
-
 void keyPressed(unsigned char key, int x, int y) {
     switch (key) {
         case 'w':
-            viewScale *= 1.5;
-            step();
+            viewScale1 *= 1.5;
             break;
         case 's':
-            viewScale /= 1.5;
-            step();
-            break;
-        case 'p':
-            glutIdleFunc(&display);
-            break;
+            viewScale1 /= 1.5;
         case 'e':
             // echo("Pressing e");
+            glutSetWindow(window1);
             glutPostRedisplay();
             break;
         case 't':
@@ -1125,9 +1120,9 @@ void keyPressed(unsigned char key, int x, int y) {
             selectRegion();
             break;
         case 'r':
-            viewX = 0.;
-            viewY = 0.;
-            viewScale = 1.;
+            viewX1 = 0.;
+            viewY1 = 0.;
+            viewScale1 = 1.;
             drawScale = 2.;
             drawPower = 1. / drawScale;
             break;
@@ -1170,6 +1165,45 @@ void keyPressed(unsigned char key, int x, int y) {
     }
 }
 
+void keyPressed2(unsigned char key, int x, int y) {
+    switch (key) {
+        case 'w':
+            viewScale2 *= 1.5;
+            break;
+        case 's':
+            viewScale2 /= 1.5;
+            break;
+        case 'e':
+            glutSetWindow(window2);
+            glutPostRedisplay();
+            break;
+        // case 't':
+        //     transform = !transform;
+        //     fprintf(stderr, "Set transform to %d\n", transform);
+        //     break;
+        case 'm':
+            drawScale *= 1.1;
+            drawPower = 1. / drawScale;
+            break;
+        case 'n':
+            drawScale /= 1.1;
+            drawPower = 1. / drawScale;
+            break;
+        case 'r':
+            viewX2 = 0.;
+            viewY2 = 0.;
+            viewScale2 = 1.;
+            break;
+        case 'q':
+        	cleanup();
+        	fprintf(stderr, "\n");
+            exit(0);
+            break;
+        default:
+            break;
+    }
+}
+
 void specialKeyPressed(int key, int x, int y) {
     switch (key) {
         case GLUT_KEY_LEFT:
@@ -1189,22 +1223,43 @@ void specialKeyPressed(int key, int x, int y) {
     }
 }
 
-void mouseFunc(int button, int state, int x, int y) {
+void mouseFunc1(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         // fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
         if (transform) {
             mouse_x_down = x;
             mouse_y_down = y;
-            mouse_state = state;
+            mouse_state_1 = state;
         }
         else {
-            viewX = viewX + (2 * x / (double)windowW - 1) / viewScale;
-            viewY = viewY - (2 * y / (double)windowH - 1) / viewScale;
+            viewX1 = viewX1 + (2 * x / (double)windowW1 - 1) / viewScale1;
+            viewY1 = viewY1 - (2 * y / (double)windowH1 - 1) / viewScale1;
         }
 	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-        mouse_state = state;
+        mouse_state_1 = state;
+    }
+}
+
+void mouseFunc2(int button, int state, int x, int y) {
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
+        // fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
+        // if (transform2) {
+        //     mouse_x_down = x;
+        //     mouse_y_down = y;
+        //     mouse_state_2 = state;
+        // }
+        // else {
+            viewX2 = viewX2 + (2 * x / (double)windowW2 - 1) / viewScale2;
+            viewY2 = viewY2 - (2 * y / (double)windowH2 - 1) / viewScale2;
+        fprintf(stderr, "\nviewX, viewW = (%f, %f)\n", viewX2, viewY2);
+        // }
+	}
+
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+        mouse_state_2 = state;
     }
 }
 
@@ -1215,22 +1270,36 @@ void motionFunc(int x, int y) {
 
 void reshape(int w, int h)
 {
-    windowW = w;
-    windowH = h;
+    windowW1 = w;
+    windowH1 = h;
 
-    windowW2 = windowW / 2.;
-    windowH2 = windowH / 2.;
-    invW2 = 2. / windowW;
-    invH2 = 2. / windowH;
+    halfWindowW1 = windowW1 / 2.;
+    halfWindowW1 = windowH1 / 2.;
+    invW1 = 2. / windowW1;
+    invH1 = 2. / windowH1;
 
-    fprintf(stderr, "\nNew size = (%d, %d)\n", w, h);
+    fprintf(stderr, "\nNew size 1 = (%d, %d)\n", w, h);
+}
+
+void reshape2(int w, int h)
+{
+    windowW2 = w;
+    windowH2 = h;
+
+    halfWindowW2 = windowW2 / 2.;
+    halfWindowW2 = windowH2 / 2.;
+    invW2 = 2. / windowW2;
+    invH2 = 2. / windowH2;
+
+    fprintf(stderr, "\nNew size 2 = (%d, %d)\n", w, h);
 }
 
 void display2() {
     glutSetWindow(window2);
-    processContrib2();
 
     if (updateTexture) {
+        processContrib2();
+        
         glClearColor( 0, 0, 0, 1 );
         glColor3f(1, 1, 1);
         glClear( GL_COLOR_BUFFER_BIT );
@@ -1251,8 +1320,8 @@ void display2() {
         );
 
         glPushMatrix();
-        glScalef(viewScale, viewScale, 1.);
-        glTranslatef(-viewX, -viewY, 0.);
+        glScalef(viewScale2, viewScale2, 1.);
+        glTranslatef(-viewX2, -viewY2, 0.);
 
         glBegin(GL_QUADS);
             glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
@@ -1268,8 +1337,8 @@ void display2() {
             drawGrid();
         }
 
-        // if (mouse_state == GLUT_DOWN) {
-            // drawBox();
+        // if (mouse_state_2 == GLUT_DOWN) {
+        //     drawBox();
         // }
         glFlush();
         glutSwapBuffers();
@@ -1284,30 +1353,30 @@ void displayAll() {
 
 void createWindow1() {
     glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize( windowW, windowH );
+    glutInitWindowSize( windowW1, windowH1 );
     window1 = glutCreateWindow( "Buddhabrot Main" );
     
     glutDisplayFunc(&display);
     // glutIdleFunc(&display);
     glutKeyboardFunc(&keyPressed);
     glutSpecialFunc(&specialKeyPressed);
-    glutMouseFunc(mouseFunc);
+    glutMouseFunc(&mouseFunc1);
     glutMotionFunc(&motionFunc);
     glutReshapeFunc(&reshape);
 }
 
 void createWindow2() {
     glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize( windowW, windowH );
+    glutInitWindowSize( windowW1, windowH1 );
     window2 = glutCreateWindow( "Buddhabrot Contrib");
     
     glutDisplayFunc(&display2);
     // glutIdleFunc(&display2);
-    // glutKeyboardFunc(&keyPressed);
+    glutKeyboardFunc(&keyPressed2);
     // glutSpecialFunc(&specialKeyPressed);
-    // glutMouseFunc(mouseFunc);
+    glutMouseFunc(&mouseFunc2);
     // glutMotionFunc(&motionFunc);
-    // glutReshapeFunc(&reshape);
+    glutReshapeFunc(&reshape2);
 }
 
 int main(int argc, char **argv) {

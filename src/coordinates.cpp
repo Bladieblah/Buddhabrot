@@ -24,23 +24,37 @@ double sinTheta = 0;
 double cosTheta = 1;
 double ratio_xy = (double)size_x / (double)size_y;
 double ratio_yx = (double)size_y / (double)size_x;
-double mutateSpread = 1e-3;
 
-// Viewport stuff
-int windowW = 1400;
-int windowH = 801;
+// Viewport stuff window 1
+int windowW1 = 1400;
+int windowH1 = 801;
 
-double windowW2 = windowW / 2.;
-double windowH2 = windowH / 2.;
-double invW2 = 2. / windowW;
-double invH2 = 2. / windowH;
+double halfWindowW1 = windowW1 / 2.;
+double halfWindowH1 = windowH1 / 2.;
+double invW1 = 2. / windowW1;
+double invH1 = 2. / windowH1;
+
+// Viewport stuff window 2
+int windowW2 = 1400;
+int windowH2 = 801;
+
+double halfWindowW2 = windowW2 / 2.;
+double halfWindowH2 = windowH2 / 2.;
+double invW2 = 2. / windowW2;
+double invH2 = 2. / windowH2;
 
 // Texture positioning
-double viewScale = 1.;
-double viewX = 0.;
-double viewY = 0.;
-double drawScale = 2.;
+double viewScale1 = 1.;
+double viewX1 = 0.;
+double viewY1 = 0.;
 
+// Texture positioning
+double viewScale2 = 1.;
+double viewX2 = 0.;
+double viewY2 = 0.;
+
+// Rescale fractals before drawing with colormap
+double drawScale = 2.;
 double drawPower = 1. / drawScale;
 
 void updateFractalVars() {
@@ -48,7 +62,6 @@ void updateFractalVars() {
     scale2 = 2 * scale / size_y;
     sinTheta = sin(theta);
     cosTheta = cos(theta);
-    mutateSpread = fmin(1e-3, 1e-2 * scale);
 }
 
 // Mandel <=> Fractal
@@ -142,8 +155,8 @@ MandelCoord ttm(TextureCoord textureCoord) {
 TextureCoord ptt(PixelCoord pixelCoord) {
     TextureCoord textureCoord;
 
-    textureCoord.x = (pixelCoord.x * invW2 - 1) / viewScale + viewX;
-    textureCoord.y = ((windowH - pixelCoord.y) * invH2 - 1) / viewScale + viewY;
+    textureCoord.x = (pixelCoord.x * invW1 - 1) / viewScale1 + viewX1;
+    textureCoord.y = ((windowH1 - pixelCoord.y) * invH1 - 1) / viewScale1 + viewY1;
 
     return textureCoord;
 }
@@ -151,8 +164,8 @@ TextureCoord ptt(PixelCoord pixelCoord) {
 PixelCoord ttp(TextureCoord textureCoord) {
     PixelCoord pixelCoord;
 
-    pixelCoord.x = ((textureCoord.x - viewX) * viewScale + 1) * windowH2;
-    pixelCoord.y = ((textureCoord.y - viewY) * viewScale + 1) * windowW2;
+    pixelCoord.x = ((textureCoord.x - viewX1) * viewScale1 + 1) * halfWindowH1;
+    pixelCoord.y = ((textureCoord.y - viewY1) * viewScale1 + 1) * halfWindowW1;
 
     return pixelCoord;
 }

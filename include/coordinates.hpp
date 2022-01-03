@@ -26,21 +26,35 @@ extern double ratio_xy;
 extern double ratio_yx;
 extern double mutateSpread;
 
-// Viewport stuff
-extern int windowW;
-extern int windowH;
+// Viewport stuff window 1
+extern int windowW1;
+extern int windowH1;
 
-extern double windowW2;
-extern double windowH2;
+extern double halfWindowW1;
+extern double halfWindowH1;
+extern double invW1;
+extern double invH1;
+
+// Viewport stuff window 1
+extern int windowW2;
+extern int windowH2;
+
+extern double halfWindowW2;
+extern double halfWindowH2;
 extern double invW2;
 extern double invH2;
 
-// Texture positioning
-extern double viewScale;
-extern double viewX;
-extern double viewY;
-extern double drawScale;
+// Texture positioning window 1
+extern double viewScale1;
+extern double viewX1;
+extern double viewY1;
 
+// Texture positioning window 1
+extern double viewScale2;
+extern double viewX2;
+extern double viewY2;
+
+extern double drawScale;
 extern double drawPower;
 
 
