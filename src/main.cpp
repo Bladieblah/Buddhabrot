@@ -403,39 +403,6 @@ void processFractal2() {
     }
 }
 
-// void processContrib() {
-//     int i, j, ind, colInd;
-
-//     double thr = (double)maxContrib;
-
-//     for (i=0; i<size_x; i++) {
-//         for (j=0; j<size_y; j++) {
-//             ind = size_x * j + i;
-
-//             if (showColorBar && i < 70) {
-//                 ind *= 3;
-//                 colInd = 3 * (int)(j / (double)size_y * nColours);
-//                 data[ind + 0] = colourMap[colInd + 0];
-//                 data[ind + 1] = colourMap[colInd + 1];
-//                 data[ind + 2] = colourMap[colInd + 2];
-//                 continue;
-//             }
-
-//             if (!showDifference) {
-//                 colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-//             }
-//             else {
-//                 colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-//             }
-
-//             ind *= 3;
-//             for (int k=0; k<3; k++) {
-//                 data[ind + k] = colourMap[colInd + k];
-//             }
-//         }
-//     }
-// }
-
 void processContrib2() {
     int i, j, ind, colInd;
 
@@ -473,9 +440,7 @@ MandelCoord mutateParticle(int thread, int particle) {
         // result.x = 2 * particles[thread][particle].x + RANDN() * fmin(scale, 1e-1);
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
-    else {
-        // result.x = 4.5 * UNI() - 2.6;
-        // result.y = 3.0 * UNI() - 1.5;
+    else if (targetedRandom) {
         int si = UNI() * sampleSizeX;
         int sj = UNI() * sampleSizeY;
         double r, rx, ry;
@@ -496,6 +461,10 @@ MandelCoord mutateParticle(int thread, int particle) {
         }
         result.x = xSamples[sampleSizeX * sj + si] + RANDN() * r;
         result.y = ySamples[sampleSizeX * sj + si] + RANDN() * r;
+    }
+    else {
+        result.x = 4.5 * UNI() - 2.6;
+        result.y = 3.0 * UNI() - 1.5;
     }
 
     return result;
@@ -537,26 +506,19 @@ void _mandelbrot(int thread) {
     segmented = false;
 
 	for (int i=0; i<iterations * particleCount; i++) {
-        si = UNI() * sampleSizeX;
-        sj = UNI() * sampleSizeY;
+        if (targetedRandom) {
+            si = UNI() * sampleSizeX;
+            sj = UNI() * sampleSizeY;
 
-        a = xSamples[sampleSizeX * sj + si];
-        b = ySamples[sampleSizeX * sj + si];
-        // if (UNI() > prob) {
-        //     a = 4.5 * UNI() - 2.6;
-        //     b = 3.0 * UNI() - 1.5;
-        // }
-        // else {
-        //     a += RANDN() * mutateSpread;
-        //     b += RANDN() * mutateSpread;
-        // }
+            a = xSamples[sampleSizeX * sj + si];
+            b = ySamples[sampleSizeX * sj + si];
+        }
+        else {
+            result.x = 4.5 * UNI() - 2.6;
+            result.y = 3.0 * UNI() - 1.5;
+        }
+
         result = converge(a, b, thread, 0);
-        // if (result.hitCount > 0) {
-        //     prob = sqrt(result.len / (double)thresholds[thresholdCount-1] * sqrt(1 - countUnique(ppath[thread], result.hitCount) / (double)result.hitCount) + result.impact);
-        // }
-        // else {
-        //     prob = 0;
-        // }
     }
 
     segmented = _segmented;
@@ -986,12 +948,14 @@ void clearData() {
 
     for (i=0; i<size_x * size_y; i++) {
         fractal2[i] = 0;
-        fractalContrib[i] = 0;
         for (j=0; j<thresholdCount; j++) {
             fractal[thresholdCount * i + j] = 0;
         }
     }
 
+    for (i=0; i<size_x * size_y * 4; i++) {
+        fractalContrib[i] = 0;
+    }
 
     maxVal = 0;
     pixSum = 0;
@@ -1291,7 +1255,10 @@ void reshape(int w, int h)
     invW1 = 2. / windowW1;
     invH1 = 2. / windowH1;
 
-    fprintf(stderr, "\nNew size 1 = (%d, %d)\n", w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_MODELVIEW);
 }
 
 void reshape2(int w, int h)
@@ -1304,7 +1271,10 @@ void reshape2(int w, int h)
     invW2 = 2. / windowW2;
     invH2 = 2. / windowH2;
 
-    fprintf(stderr, "\nNew size 2 = (%d, %d)\n", w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_MODELVIEW);
 }
 
 void display2() {

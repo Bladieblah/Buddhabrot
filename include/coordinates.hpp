@@ -54,6 +54,7 @@ extern double viewScale2;
 extern double viewX2;
 extern double viewY2;
 
+// Colormap stuff
 extern double drawScale;
 extern double drawPower;
 
