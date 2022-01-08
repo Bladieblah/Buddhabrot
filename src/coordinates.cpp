@@ -26,8 +26,8 @@ double ratio_xy = (double)size_x / (double)size_y;
 double ratio_yx = (double)size_y / (double)size_x;
 
 // Viewport stuff window 1
-int windowW1 = 1400;
-int windowH1 = 801;
+int windowW1 = 700;
+int windowH1 = 401;
 
 double halfWindowW1 = windowW1 / 2.;
 double halfWindowH1 = windowH1 / 2.;
@@ -35,8 +35,8 @@ double invW1 = 2. / windowW1;
 double invH1 = 2. / windowH1;
 
 // Viewport stuff window 2
-int windowW2 = 1400;
-int windowH2 = 801;
+int windowW2 = 700;
+int windowH2 = 401;
 
 double halfWindowW2 = windowW2 / 2.;
 double halfWindowH2 = windowH2 / 2.;
@@ -150,6 +150,16 @@ MandelCoord ttm(TextureCoord textureCoord) {
     return mandelCoord;
 }
 
+// Window 2
+MandelCoord ttm2(TextureCoord textureCoord) {
+    MandelCoord mandelCoord;
+
+    mandelCoord.x = textureCoord.x * 1.3 * ratio_xy - 0.5;
+    mandelCoord.y = textureCoord.y * 1.3;
+
+    return mandelCoord;
+}
+
 // Texture <=> Pixel
 
 TextureCoord ptt(PixelCoord pixelCoord) {
@@ -157,6 +167,15 @@ TextureCoord ptt(PixelCoord pixelCoord) {
 
     textureCoord.x = (pixelCoord.x * invW1 - 1) / viewScale1 + viewX1;
     textureCoord.y = ((windowH1 - pixelCoord.y) * invH1 - 1) / viewScale1 + viewY1;
+
+    return textureCoord;
+}
+
+TextureCoord ptt2(PixelCoord pixelCoord) {
+    TextureCoord textureCoord;
+
+    textureCoord.x = (pixelCoord.x * invW2 - 1) / viewScale2 + viewX2;
+    textureCoord.y = ((windowH2 - pixelCoord.y) * invH2 - 1) / viewScale2 + viewY2;
 
     return textureCoord;
 }

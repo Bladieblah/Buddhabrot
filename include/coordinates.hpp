@@ -88,7 +88,9 @@ FractalCoord mtf(MandelCoord mandelCoord);
 FractalCoord mtfMirror(MandelCoord mandelCoord);
 TextureCoord mtt(MandelCoord mandelCoord);
 MandelCoord ttm(TextureCoord textureCoord);
+MandelCoord ttm2(TextureCoord textureCoord);
 TextureCoord ptt(PixelCoord pixelCoord);
+TextureCoord ptt2(PixelCoord pixelCoord);
 PixelCoord ttp(TextureCoord textureCoord);
 
 bool operator==(const FractalCoord& p1, const FractalCoord& p2);

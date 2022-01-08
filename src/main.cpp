@@ -57,7 +57,7 @@ int mouse_y2 = 0;
 
 // Mandelbrot config
 int kmax = 800;
-double escape = 9;
+double escape = 25;
 
 bool transform = true;
 bool withColormap = false;
@@ -463,8 +463,8 @@ MandelCoord mutateParticle(int thread, int particle) {
         result.y = ySamples[sampleSizeX * sj + si] + RANDN() * r;
     }
     else {
-        result.x = 4.5 * UNI() - 2.6;
-        result.y = 3.0 * UNI() - 1.5;
+        result.x = 2. * (4.5 * UNI() - 2.6);
+        result.y = 2. * (3.0 * UNI() - 1.5);
     }
 
     return result;
@@ -500,7 +500,6 @@ void _metrobrot(int thread) {
 void _mandelbrot(int thread) {
     int si, sj;
     double a, b;
-    double prob = -1;
     Particle result;
     bool _segmented = segmented;
     segmented = false;
@@ -514,8 +513,8 @@ void _mandelbrot(int thread) {
             b = ySamples[sampleSizeX * sj + si];
         }
         else {
-            result.x = 4.5 * UNI() - 2.6;
-            result.y = 3.0 * UNI() - 1.5;
+            a = 2. * (4.5 * UNI() - 2.6);
+            b = 2. * (3.0 * UNI() - 1.5);
         }
 
         result = converge(a, b, thread, 0);
@@ -739,6 +738,32 @@ void drawGrid() {
     glEnd();
 }
 
+void drawPath() {
+    double scaleX = 2. / (double(windowW1));
+    double scaleY = 2. / (double(windowH1));
+
+    PixelCoord pc({mouse_x2, mouse_y2});
+    MandelCoord mc = ttm2(ptt2(pc));
+    MandelCoord z({0,0});
+    
+    glPointSize(6);
+    glEnable(GL_POINT_SMOOTH);
+    
+    glBegin(GL_POINTS);
+
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
+        pc = ttp(mtt(z));
+        glVertex2f(pc.x * scaleX - 1, pc.y * scaleY - 1);
+        mandelStep(&z, &mc);
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+
+    glEnd();
+}
+
 void display() {
     glutSetWindow(window1);
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -803,6 +828,11 @@ void display() {
         if (mouse_state_1 == GLUT_DOWN) {
             drawBox();
         }
+
+        if (!move2) {
+            drawPath();
+        }
+
         glFlush();
         glutSwapBuffers();
     }
@@ -1216,18 +1246,15 @@ void mouseFunc2(int button, int state, int x, int y) {
     mouse_y2 = y;
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
-        // fprintf(stderr, "\nClicked at (%d, %d)\n", x, y);
-        // if (transform2) {
-        //     mouse_x_down = x;
-        //     mouse_y_down = y;
-        //     mouse_state_2 = state;
-        // }
-        // else {
+        if (!move2) {
+            mouse_x_down = x;
+            mouse_y_down = y;
+            mouse_state_2 = state;
+        }
+        else {
             viewX2 = viewX2 + (2 * x / (double)windowW2 - 1) / viewScale2;
             viewY2 = viewY2 - (2 * y / (double)windowH2 - 1) / viewScale2;
-        fprintf(stderr, "\nviewX, viewW = (%f, %f)\n", viewX2, viewY2);
-        // }
+        }
 	}
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
@@ -1340,7 +1367,6 @@ void createWindow1() {
     window1 = glutCreateWindow( "Buddhabrot Main" );
     
     glutDisplayFunc(&display);
-    // glutIdleFunc(&display);
     glutKeyboardFunc(&keyPressed);
     glutSpecialFunc(&specialKeyPressed);
     glutMouseFunc(&mouseFunc1);
@@ -1354,11 +1380,10 @@ void createWindow2() {
     window2 = glutCreateWindow( "Buddhabrot Contrib");
     
     glutDisplayFunc(&display2);
-    // glutIdleFunc(&display2);
     glutKeyboardFunc(&keyPressed2);
     // glutSpecialFunc(&specialKeyPressed);
     glutMouseFunc(&mouseFunc2);
-    // glutMotionFunc(&motionFunc);
+    glutMotionFunc(&motionFunc2);
     glutReshapeFunc(&reshape2);
 }
 
