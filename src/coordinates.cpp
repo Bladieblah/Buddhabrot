@@ -26,8 +26,8 @@ double ratio_xy = (double)size_x / (double)size_y;
 double ratio_yx = (double)size_y / (double)size_x;
 
 // Viewport stuff window 1
-int windowW1 = 700;
-int windowH1 = 401;
+int windowW1 = 1400;
+int windowH1 = 801;
 
 double halfWindowW1 = windowW1 / 2.;
 double halfWindowH1 = windowH1 / 2.;

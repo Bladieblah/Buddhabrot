@@ -2,10 +2,10 @@
 #define COORDINATES_H
 
 // Fractal size
-// #define size_x 5120
-// #define size_y 2881
-#define size_x 1400
-#define size_y 801
+#define size_x 5120
+#define size_y 2881
+// #define size_x 1400
+// #define size_y 801
 
 extern double halfSize_x;
 extern double halfSize_y;

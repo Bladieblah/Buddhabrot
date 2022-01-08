@@ -96,9 +96,6 @@ uint64_t frameFractal2[size_y * size_x] = {0};
 uint64_t maxVal = 0;
 uint64_t pixSum = 0;
 
-double *fractalContrib;
-double maxContrib = 0;
-
 std::chrono::high_resolution_clock::time_point frameTime = std::chrono::high_resolution_clock::now();
 
 void echo(const char *text) {
@@ -299,15 +296,6 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                 pixCount += hitCount;
                 pixSum += pixCount;
 
-                int sourceInd = 2 * size_x * (int)(2 * size_y * ((b + 1.3) / 2.6)) + (int)(2 * size_x * ((a + 2.5) / 4.));
-                if (sourceInd >= 0 && sourceInd < 4 * size_y * size_x) {
-                    fractalContrib[sourceInd] += impact;
-
-                    if (fractalContrib[sourceInd] > maxContrib) {
-                        maxContrib = fractalContrib[sourceInd];
-                    }
-                }
-
                 result = {a, b, j, hitCount, impact};
 
                 return result;
@@ -398,34 +386,6 @@ void processFractal2() {
             ind *= 3;
             for (int k=0; k<3; k++) {
                 data[ind + k] = colourMap[colInd + k];
-            }
-        }
-    }
-}
-
-void processContrib2() {
-    int i, j, ind, colInd;
-
-    double thr = (double)maxContrib;
-
-    for (i=0; i<2*size_x; i++) {
-        for (j=0; j<2*size_y; j++) {
-            ind = 2 * size_x * j + i;
-
-            if (showColorBar && i < 70) {
-                ind *= 3;
-                colInd = 3 * (int)(j / (double)(2 * size_y) * nColours);
-                data2[ind + 0] = colourMap[colInd + 0];
-                data2[ind + 1] = colourMap[colInd + 1];
-                data2[ind + 2] = colourMap[colInd + 2];
-                continue;
-            }
-
-            colInd = 3 * (int)(nColours * pow((double)fractalContrib[ind] / thr, drawPower));
-
-            ind *= 3;
-            for (int k=0; k<3; k++) {
-                data2[ind + k] = colourMap[colInd + k];
             }
         }
     }
@@ -653,7 +613,6 @@ void prepare() {
     pcg32_srandom(time(NULL) ^ (intptr_t)&printf, (intptr_t)&kmax); // Seed pcg
 
     data2 = (uint32_t *)malloc(12 * size_x * size_y * sizeof(uint32_t));
-    fractalContrib = (double *)malloc(4 * size_x * size_y * sizeof(double));
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));
@@ -673,7 +632,6 @@ void cleanup() {
     free(data2);
 
     free(colourMap);
-    free(fractalContrib);
     free(source_str);
     free(path);
     free(ppath);
@@ -738,32 +696,6 @@ void drawGrid() {
     glEnd();
 }
 
-void drawPath() {
-    double scaleX = 2. / (double(windowW1));
-    double scaleY = 2. / (double(windowH1));
-
-    PixelCoord pc({mouse_x2, mouse_y2});
-    MandelCoord mc = ttm2(ptt2(pc));
-    MandelCoord z({0,0});
-    
-    glPointSize(6);
-    glEnable(GL_POINT_SMOOTH);
-    
-    glBegin(GL_POINTS);
-
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        pc = ttp(mtt(z));
-        glVertex2f(pc.x * scaleX - 1, pc.y * scaleY - 1);
-        mandelStep(&z, &mc);
-
-        if (z.x * z.x + z.y * z.y > 25) {
-            break;
-        }
-    }
-
-    glEnd();
-}
-
 void display() {
     glutSetWindow(window1);
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -782,8 +714,8 @@ void display() {
     }
     avgImpact /= threadCount * particleCount;
 
-    fprintf(stderr, "\rIterations = %llu, pixSum = %llu, Frame time = %.4g, Step time = %.4g, impact = %g, maxContrib = %f", 
-        iterCount, pixSum, time_span1.count(), time_span2.count(), avgImpact, maxContrib);
+    fprintf(stderr, "\rIterations = %llu, pixSum = %llu, Frame time = %.4g, Step time = %.4g, impact = %g", 
+        iterCount, pixSum, time_span1.count(), time_span2.count(), avgImpact);
     
     frameTime = std::chrono::high_resolution_clock::now();
 
@@ -827,10 +759,6 @@ void display() {
 
         if (mouse_state_1 == GLUT_DOWN) {
             drawBox();
-        }
-
-        if (!move2) {
-            drawPath();
         }
 
         glFlush();
@@ -981,10 +909,6 @@ void clearData() {
         for (j=0; j<thresholdCount; j++) {
             fractal[thresholdCount * i + j] = 0;
         }
-    }
-
-    for (i=0; i<size_x * size_y * 4; i++) {
-        fractalContrib[i] = 0;
     }
 
     maxVal = 0;
@@ -1164,45 +1088,6 @@ void keyPressed(unsigned char key, int x, int y) {
     }
 }
 
-void keyPressed2(unsigned char key, int x, int y) {
-    switch (key) {
-        case 'w':
-            viewScale2 *= 1.5;
-            break;
-        case 's':
-            viewScale2 /= 1.5;
-            break;
-        case 'e':
-            glutSetWindow(window2);
-            glutPostRedisplay();
-            break;
-        case 't':
-            move2 = !move2;
-            fprintf(stderr, "Set move2 to %d\n", move2);
-            break;
-        case 'm':
-            drawScale *= 1.1;
-            drawPower = 1. / drawScale;
-            break;
-        case 'n':
-            drawScale /= 1.1;
-            drawPower = 1. / drawScale;
-            break;
-        case 'r':
-            viewX2 = 0.;
-            viewY2 = 0.;
-            viewScale2 = 1.;
-            break;
-        case 'q':
-        	cleanup();
-        	fprintf(stderr, "\n");
-            exit(0);
-            break;
-        default:
-            break;
-    }
-}
-
 void specialKeyPressed(int key, int x, int y) {
     switch (key) {
         case GLUT_KEY_LEFT:
@@ -1241,35 +1126,9 @@ void mouseFunc1(int button, int state, int x, int y) {
     }
 }
 
-void mouseFunc2(int button, int state, int x, int y) {
-    mouse_x2 = x;
-    mouse_y2 = y;
-
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        if (!move2) {
-            mouse_x_down = x;
-            mouse_y_down = y;
-            mouse_state_2 = state;
-        }
-        else {
-            viewX2 = viewX2 + (2 * x / (double)windowW2 - 1) / viewScale2;
-            viewY2 = viewY2 - (2 * y / (double)windowH2 - 1) / viewScale2;
-        }
-	}
-
-	if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-        mouse_state_2 = state;
-    }
-}
-
 void motionFunc(int x, int y) {
     mouse_x_up = x;
     mouse_y_up = y;
-}
-
-void motionFunc2(int x, int y) {
-    mouse_x2 = x;
-    mouse_y2 = y;
 }
 
 void reshape(int w, int h)
@@ -1288,77 +1147,9 @@ void reshape(int w, int h)
 	glMatrixMode(GL_MODELVIEW);
 }
 
-void reshape2(int w, int h)
-{
-    windowW2 = w;
-    windowH2 = h;
-
-    halfWindowW2 = windowW2 / 2.;
-    halfWindowW2 = windowH2 / 2.;
-    invW2 = 2. / windowW2;
-    invH2 = 2. / windowH2;
-
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glViewport(0, 0, w, h);
-	glMatrixMode(GL_MODELVIEW);
-}
-
-void display2() {
-    glutSetWindow(window2);
-
-    if (updateTexture) {
-        processContrib2();
-        
-        glClearColor( 0, 0, 0, 1 );
-        glColor3f(1, 1, 1);
-        glClear( GL_COLOR_BUFFER_BIT );
-
-        glEnable (GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-        glTexImage2D (
-            GL_TEXTURE_2D,
-            0,
-            GL_RGB,
-            2 * size_x,
-            2 * size_y,
-            0,
-            GL_RGB,
-            GL_UNSIGNED_INT,
-            &data2[0]
-        );
-
-        glPushMatrix();
-        glScalef(viewScale2, viewScale2, 1.);
-        glTranslatef(-viewX2, -viewY2, 0.);
-
-        glBegin(GL_QUADS);
-            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0, -1.0);
-            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0, -1.0);
-            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0,  1.0);
-            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0,  1.0);
-        glEnd();
-
-        glDisable (GL_TEXTURE_2D);
-        glPopMatrix();
-
-        if (shouldDrawGrid) {
-            drawGrid();
-        }
-
-        // if (mouse_state_2 == GLUT_DOWN) {
-        //     drawBox();
-        // }
-        glFlush();
-        glutSwapBuffers();
-    }
-    
-}
-
 void displayAll() {
     display();
-    display2();
+    // display2();
 }
 
 void createWindow1() {
@@ -1374,19 +1165,6 @@ void createWindow1() {
     glutReshapeFunc(&reshape);
 }
 
-void createWindow2() {
-    glutInitDisplayMode( GLUT_RGBA | GLUT_DOUBLE );
-    glutInitWindowSize( windowW1, windowH1 );
-    window2 = glutCreateWindow( "Buddhabrot Contrib");
-    
-    glutDisplayFunc(&display2);
-    glutKeyboardFunc(&keyPressed2);
-    // glutSpecialFunc(&specialKeyPressed);
-    glutMouseFunc(&mouseFunc2);
-    glutMotionFunc(&motionFunc2);
-    glutReshapeFunc(&reshape2);
-}
-
 int main(int argc, char **argv) {
     prepare();
     readSamples();
@@ -1397,7 +1175,6 @@ int main(int argc, char **argv) {
     
 	glutInit(&argc, argv);
     createWindow1();
-    createWindow2();
 
     glutIdleFunc(&displayAll);
 
