@@ -158,28 +158,26 @@ FractalCoord mtfMirror(MandelCoord mandelCoord) {
 
 TextureCoord mtt(MandelCoord mandelCoord) {
     TextureCoord textureCoord;
-    double temp;
+    double tempx, tempy;
 
-    textureCoord.x = mandelCoord.x - dx;
-    textureCoord.y = mandelCoord.y - dy;
+    tempx = mandelCoord.x - dx;
+    tempy = mandelCoord.y - dy;
 
-    temp = (cosTheta * textureCoord.x - sinTheta * textureCoord.y) * invScale;
-    textureCoord.y = (cosTheta * textureCoord.y + sinTheta * textureCoord.x) * invScale;
-    textureCoord.x = temp;
+    textureCoord.x = (cosTheta * tempx - sinTheta * tempy) * invScale * ratio_yx;
+    textureCoord.y = (cosTheta * tempy + sinTheta * tempx) * invScale;
 
     return textureCoord;
 }
 
 MandelCoord ttm(TextureCoord textureCoord) {
     MandelCoord mandelCoord;
-    double temp;
+    double tempx, tempy;
 
-    mandelCoord.x = textureCoord.x * scale * ratio_xy;
-    mandelCoord.y = textureCoord.y * scale;
+    tempx = textureCoord.x * scale * ratio_xy;
+    tempy = textureCoord.y * scale;
 
-    temp = (cosTheta * mandelCoord.x + sinTheta * mandelCoord.y) + dx;
-    mandelCoord.y = (cosTheta * mandelCoord.y - sinTheta * mandelCoord.x) + dy;
-    mandelCoord.x = temp;
+    mandelCoord.x = (cosTheta * tempx + sinTheta * tempy) + dx;
+    mandelCoord.y = (cosTheta * tempy - sinTheta * tempx) + dy;
 
     return mandelCoord;
 }
@@ -187,14 +185,13 @@ MandelCoord ttm(TextureCoord textureCoord) {
 // Window 2
 MandelCoord ttm2(TextureCoord textureCoord) {
     MandelCoord mandelCoord;
-    double temp;
+    double tempx, tempy;
 
-    mandelCoord.x = textureCoord.x * scale2 * ratio_xy2;
-    mandelCoord.y = textureCoord.y * scale2;
+    tempx = textureCoord.x * scale2 * ratio_xy2;
+    tempy = textureCoord.y * scale2;
 
-    temp = (cosTheta2 * mandelCoord.x + sinTheta2 * mandelCoord.y) + dx;
-    mandelCoord.y = (cosTheta2 * mandelCoord.y - sinTheta2 * mandelCoord.x) + dy;
-    mandelCoord.x = temp;
+    mandelCoord.x = (cosTheta2 * tempx + sinTheta2 * tempy) + dx;
+    mandelCoord.y = (cosTheta2 * tempy - sinTheta2 * tempx) + dy;
 
     return mandelCoord;
 }
@@ -222,8 +219,8 @@ TextureCoord ptt2(PixelCoord pixelCoord) {
 PixelCoord ttp(TextureCoord textureCoord) {
     PixelCoord pixelCoord;
 
-    pixelCoord.x = ((textureCoord.x - viewX1) * viewScale1 + 1) * halfWindowH1;
-    pixelCoord.y = ((textureCoord.y - viewY1) * viewScale1 + 1) * halfWindowW1;
+    pixelCoord.x = ((textureCoord.x - viewX1) * viewScale1 + 1) * halfWindowW1;
+    pixelCoord.y = windowH1 - ((textureCoord.y - viewY1) * viewScale1 + 1) * halfWindowH1;
 
     return pixelCoord;
 }
