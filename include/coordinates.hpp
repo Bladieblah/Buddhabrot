@@ -6,6 +6,8 @@
 // #define size_y 2881
 #define size_x 1400
 #define size_y 801
+#define size_x2 2600
+#define size_y2 2000
 
 extern double halfSize_x;
 extern double halfSize_y;
@@ -19,12 +21,25 @@ extern double dy;
 extern double theta;
 
 extern double invScale;
-extern double scale2;
+extern double scaleDouble;
 extern double sinTheta;
 extern double cosTheta;
 extern double ratio_xy;
 extern double ratio_yx;
 extern double mutateSpread;
+
+// Fractal Positioning
+extern double scale2; // Half the y size
+extern double dx2;
+extern double dy2;
+extern double theta2;
+
+extern double invScale2;
+extern double scaleDouble2;
+extern double sinTheta2;
+extern double cosTheta2;
+extern double ratio_xy2;
+extern double ratio_yx2;
 
 // Viewport stuff window 1
 extern int windowW1;
@@ -85,6 +100,7 @@ typedef struct PixelCoord {
 
 MandelCoord ftm(FractalCoord fractalCoord);
 FractalCoord mtf(MandelCoord mandelCoord);
+FractalCoord mtf2(MandelCoord mandelCoord);
 FractalCoord mtfMirror(MandelCoord mandelCoord);
 TextureCoord mtt(MandelCoord mandelCoord);
 MandelCoord ttm(TextureCoord textureCoord);

@@ -30,9 +30,6 @@ uint64_t iterCount = 0;
 int particleX, particleY;
 int window1, window2;
 
-size_t source_size;
-char *source_str;
-
 // Array to be drawn
 #define uint32_max 4294967294
 uint32_t data[size_y * size_x * 3];
@@ -299,9 +296,12 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                 pixCount += hitCount;
                 pixSum += pixCount;
 
-                int sourceInd = 2 * size_x * (int)(2 * size_y * ((b + 1.3) / 2.6)) + (int)(2 * size_x * ((a + 2.5) / 4.));
-                if (sourceInd >= 0 && sourceInd < 4 * size_y * size_x) {
+                fc = mtf2(c);
+
+                if (fc.x >= 0 && fc.x < size_x2 && fc.y >= 0 && fc.y < size_y2) {
+                    int sourceInd = size_x2 * fc.y + fc.x;
                     fractalContrib[sourceInd] += impact;
+                    // fprintf(stderr, "ix = %d, iy = %d, ind = %d, mc = %f\n", fc.x, fc.y, sourceInd, maxContrib);
 
                     if (fractalContrib[sourceInd] > maxContrib) {
                         maxContrib = fractalContrib[sourceInd];
@@ -408,13 +408,13 @@ void processContrib2() {
 
     double thr = (double)maxContrib;
 
-    for (i=0; i<2*size_x; i++) {
-        for (j=0; j<2*size_y; j++) {
-            ind = 2 * size_x * j + i;
+    for (i=0; i<size_x2; i++) {
+        for (j=0; j<size_y2; j++) {
+            ind = size_x2 * j + i;
 
             if (showColorBar && i < 70) {
                 ind *= 3;
-                colInd = 3 * (int)(j / (double)(2 * size_y) * nColours);
+                colInd = 3 * (int)(j / (double)(size_y2) * nColours);
                 data2[ind + 0] = colourMap[colInd + 0];
                 data2[ind + 1] = colourMap[colInd + 1];
                 data2[ind + 2] = colourMap[colInd + 2];
@@ -652,8 +652,8 @@ void makeColourmap() {
 void prepare() {
     pcg32_srandom(time(NULL) ^ (intptr_t)&printf, (intptr_t)&kmax); // Seed pcg
 
-    data2 = (uint32_t *)malloc(12 * size_x * size_y * sizeof(uint32_t));
-    fractalContrib = (double *)malloc(4 * size_x * size_y * sizeof(double));
+    data2 = (uint32_t *)malloc(3 * size_x2 * size_y2 * sizeof(uint32_t));
+    fractalContrib = (double *)malloc(size_x2 * size_y2 * sizeof(double));
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));
@@ -674,12 +674,19 @@ void cleanup() {
 
     free(colourMap);
     free(fractalContrib);
-    free(source_str);
-    free(path);
-    free(ppath);
 
     free(xSamples);
     free(ySamples);
+
+    for (int i=0; i<threadCount; i++) {
+        free(path[i]);
+        free(ppath[i]);
+        free(particles[i]);
+    }
+
+    free(path);
+    free(ppath);
+    free(particles);
 }
 
 void step() {
@@ -745,6 +752,7 @@ void drawPath() {
     PixelCoord pc({mouse_x2, mouse_y2});
     MandelCoord mc = ttm2(ptt2(pc));
     MandelCoord z({0,0});
+
     
     glPointSize(6);
     glEnable(GL_POINT_SMOOTH);
@@ -753,6 +761,7 @@ void drawPath() {
 
     for (int i=0; i<thresholds[thresholdCount-1]; i++) {
         pc = ttp(mtt(z));
+
         glVertex2f(pc.x * scaleX - 1, pc.y * scaleY - 1);
         mandelStep(&z, &mc);
 
@@ -836,6 +845,7 @@ void display() {
         glFlush();
         glutSwapBuffers();
     }
+
 }
 
 void writeData() {
@@ -983,7 +993,7 @@ void clearData() {
         }
     }
 
-    for (i=0; i<size_x * size_y * 4; i++) {
+    for (i=0; i<size_x2 * size_y2; i++) {
         fractalContrib[i] = 0;
     }
 
@@ -1124,6 +1134,9 @@ void keyPressed(unsigned char key, int x, int y) {
             viewScale1 = 1.;
             drawScale = 2.;
             drawPower = 1. / drawScale;
+            break;
+        case 'R':
+            clearData();
             break;
         case 'i':
             initParticles();
@@ -1308,7 +1321,9 @@ void display2() {
     glutSetWindow(window2);
 
     if (updateTexture) {
+        // echo("procon2");
         processContrib2();
+        // echo("Done");
         
         glClearColor( 0, 0, 0, 1 );
         glColor3f(1, 1, 1);
@@ -1321,8 +1336,8 @@ void display2() {
             GL_TEXTURE_2D,
             0,
             GL_RGB,
-            2 * size_x,
-            2 * size_y,
+            size_x2,
+            size_y2,
             0,
             GL_RGB,
             GL_UNSIGNED_INT,
@@ -1357,7 +1372,9 @@ void display2() {
 }
 
 void displayAll() {
+    // echo("Display 1");
     display();
+    // echo("Display 2");
     display2();
 }
 
@@ -1396,8 +1413,11 @@ int main(int argc, char **argv) {
     initParticles();
     
 	glutInit(&argc, argv);
+    // echo("Window 1");
     createWindow1();
+    // echo("Window 2");
     createWindow2();
+    // echo("Windows done");
 
     glutIdleFunc(&displayAll);
 

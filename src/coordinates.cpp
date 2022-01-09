@@ -19,11 +19,23 @@ double theta = 0.;
 // double dy = 0.793633;
 
 double invScale = 1. / scale;
-double scale2 = 2 * scale / size_y;
+double scaleDouble = 2 * scale / size_y;
 double sinTheta = 0;
 double cosTheta = 1;
 double ratio_xy = (double)size_x / (double)size_y;
 double ratio_yx = (double)size_y / (double)size_x;
+
+double scale2 = 1.3; // Half the y size
+double dx2 = -0.5;
+double dy2 = 0.;
+double theta2 = 0.;
+
+double invScale2 = 1. / scale2;
+double scaleDouble2 = 2 * scale2 / size_y2;
+double sinTheta2 = 0;
+double cosTheta2 = 1;
+double ratio_xy2 = (double)size_x2 / (double)size_y2;
+double ratio_yx2 = (double)size_y2 / (double)size_x2;
 
 // Viewport stuff window 1
 int windowW1 = 700;
@@ -59,7 +71,7 @@ double drawPower = 1. / drawScale;
 
 void updateFractalVars() {
     invScale = 1. / scale;
-    scale2 = 2 * scale / size_y;
+    scaleDouble = 2 * scale / size_y;
     sinTheta = sin(theta);
     cosTheta = cos(theta);
 }
@@ -103,10 +115,32 @@ FractalCoord mtf(MandelCoord mandelCoord) {
     double tempx = mandelCoord.x - dx;
     double tempy = mandelCoord.y - dy;
 
-    fractalCoord.x = (cosTheta * tempx - sinTheta * tempy + scale * ratio_xy) / scale2;
-    fractalCoord.y = (cosTheta * tempy + sinTheta * tempx + scale) / scale2;
+    fractalCoord.x = (cosTheta * tempx - sinTheta * tempy + scale * ratio_xy) / scaleDouble;
+    fractalCoord.y = (cosTheta * tempy + sinTheta * tempx + scale) / scaleDouble;
 
     return fractalCoord;
+}
+
+FractalCoord mtf2(MandelCoord mandelCoord) {
+    FractalCoord fractalCoord;
+    double tempx = mandelCoord.x - dx2;
+    double tempy = mandelCoord.y - dy2;
+
+    fractalCoord.x = (cosTheta2 * tempx - sinTheta2 * tempy + scale2 * ratio_xy2) / scaleDouble2;
+    fractalCoord.y = (cosTheta2 * tempy + sinTheta2 * tempx + scale2) / scaleDouble2;
+
+    return fractalCoord;
+}
+
+MandelCoord ftm2(FractalCoord fractalCoord) {
+    MandelCoord mandelCoord;
+    double tempx = fractalCoord.x * scaleDouble2 - scale2 * ratio_xy2;
+    double tempy = fractalCoord.y * scaleDouble2 - scale2;
+
+    mandelCoord.x = (cosTheta2 * tempx + sinTheta2 * tempy) + dx2;
+    mandelCoord.y = (cosTheta2 * tempy - sinTheta2 * tempx) + dy2;
+
+    return mandelCoord;
 }
 
 FractalCoord mtfMirror(MandelCoord mandelCoord) {
@@ -114,8 +148,8 @@ FractalCoord mtfMirror(MandelCoord mandelCoord) {
     double tempx = mandelCoord.x - dx;
     double tempy = -mandelCoord.y - dy;
 
-    fractalCoord.x = (cosTheta * tempx - sinTheta * tempy + scale * ratio_xy) / scale2;
-    fractalCoord.y = (cosTheta * tempy + sinTheta * tempx + scale) / scale2;
+    fractalCoord.x = (cosTheta * tempx - sinTheta * tempy + scale * ratio_xy) / scaleDouble;
+    fractalCoord.y = (cosTheta * tempy + sinTheta * tempx + scale) / scaleDouble;
 
     return fractalCoord;
 }
@@ -153,9 +187,14 @@ MandelCoord ttm(TextureCoord textureCoord) {
 // Window 2
 MandelCoord ttm2(TextureCoord textureCoord) {
     MandelCoord mandelCoord;
+    double temp;
 
-    mandelCoord.x = textureCoord.x * 1.3 * ratio_xy - 0.5;
-    mandelCoord.y = textureCoord.y * 1.3;
+    mandelCoord.x = textureCoord.x * scale2 * ratio_xy2;
+    mandelCoord.y = textureCoord.y * scale2;
+
+    temp = (cosTheta2 * mandelCoord.x + sinTheta2 * mandelCoord.y) + dx;
+    mandelCoord.y = (cosTheta2 * mandelCoord.y - sinTheta2 * mandelCoord.x) + dy;
+    mandelCoord.x = temp;
 
     return mandelCoord;
 }
