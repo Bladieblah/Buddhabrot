@@ -301,7 +301,6 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                 if (fc.x >= 0 && fc.x < size_x2 && fc.y >= 0 && fc.y < size_y2) {
                     int sourceInd = size_x2 * fc.y + fc.x;
                     fractalContrib[sourceInd] += impact;
-                    // fprintf(stderr, "ix = %d, iy = %d, ind = %d, mc = %f\n", fc.x, fc.y, sourceInd, maxContrib);
 
                     if (fractalContrib[sourceInd] > maxContrib) {
                         maxContrib = fractalContrib[sourceInd];
@@ -746,12 +745,10 @@ void drawGrid() {
 }
 
 void drawPath() {
-    double scaleX = 2. / (double(windowW1));
-    double scaleY = 2. / (double(windowH1));
-
     PixelCoord pc({mouse_x2, mouse_y2});
     MandelCoord mc = ttm2(ptt2(pc));
     MandelCoord z({0,0});
+    TextureCoord tc;
 
     
     glPointSize(6);
@@ -759,10 +756,21 @@ void drawPath() {
     
     glBegin(GL_POINTS);
 
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        pc = ttp(mtt(z));
+    glColor3f(0, 1, 0);
+    tc = mtt(z);
+    glVertex2f(tc.x, tc.y);
+    mandelStep(&z, &mc);
+    
+    glColor3f(1, 1, 0);
+    tc = mtt(z);
+    glVertex2f(tc.x, tc.y);
+    mandelStep(&z, &mc);
 
-        glVertex2f(pc.x * scaleX - 1, pc.y * scaleY - 1);
+    glColor3f(1, 1, 1);
+
+    for (int i=2; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
         mandelStep(&z, &mc);
 
         if (z.x * z.x + z.y * z.y > 25) {
@@ -828,6 +836,11 @@ void display() {
         glEnd();
 
         glDisable (GL_TEXTURE_2D);
+
+        if (!move2) {
+            drawPath();
+        }
+
         glPopMatrix();
 
         if (shouldDrawGrid) {
@@ -836,10 +849,6 @@ void display() {
 
         if (mouse_state_1 == GLUT_DOWN) {
             drawBox();
-        }
-
-        if (!move2) {
-            drawPath();
         }
 
         glFlush();
