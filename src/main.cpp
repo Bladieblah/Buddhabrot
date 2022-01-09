@@ -114,8 +114,8 @@ FractalCoord **ppath;
 
 double *xSamples;
 double *ySamples;
-int sampleSizeX = 6000;
-int sampleSizeY = 5000;
+int sampleSizeX = 3000;
+int sampleSizeY = 2500;
 
 // Points to track
 typedef struct Particle {
@@ -848,7 +848,7 @@ void readSamples() {
     xSamples = (double *)malloc(sampleSizeX * sampleSizeY * sizeof(double));
     ySamples = (double *)malloc(sampleSizeX * sampleSizeY * sizeof(double));
 
-    sprintf(filename, "XX.csv");
+    sprintf(filename, "XX_y2.csv");
     inFile = fopen(filename, "r");
 
     if (inFile == NULL) {
@@ -868,7 +868,7 @@ void readSamples() {
 
     fclose(inFile);
 
-    sprintf(filename, "YY.csv");
+    sprintf(filename, "YY_y2.csv");
     inFile = fopen(filename, "r");
 
     if (inFile == NULL) {
