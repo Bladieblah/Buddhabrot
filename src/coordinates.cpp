@@ -64,40 +64,6 @@ void updateFractalVars() {
     cosTheta = cos(theta);
 }
 
-// Mandel <=> Fractal
-
-// FractalCoord mtf(MandelCoord mandelCoord) {
-//     FractalCoord fractalCoord;
-//     double temp;
-
-//     fractalCoord.x = mandelCoord.x - dx;
-//     fractalCoord.y = mandelCoord.y - dy;
-
-//     temp = (cosTheta * fractalCoord.x - sinTheta * fractalCoord.y) * invScale + 1;
-//     fractalCoord.y = (cosTheta * fractalCoord.y + sinTheta * fractalCoord.x) * invScale;
-//     fractalCoord.x = temp;
-
-//     return fractalCoord;
-// }
-
-// MandelCoord ftm(FractalCoord fractalCoord) {
-//     TextureCoord textureCoord;
-
-//     textureCoord.x = fractalCoord.x * invHalfSize_x - 1;
-//     textureCoord.y = fractalCoord.y * invHalfSize_y - 1;
-
-//     return ttm(textureCoord);
-// }
-
-// MandelCoord ftm(FractalCoord fractalCoord) {
-//     MandelCoord mandelCoord;
-
-//     mandelCoord.x = fractalCoord.x * scale2 + dx - scale * ratio_xy;
-//     mandelCoord.y = (size_y - fractalCoord.y) * scale2 + dy - scale;
-
-//     return mandelCoord;
-// }
-
 FractalCoord mtf(MandelCoord mandelCoord) {
     FractalCoord fractalCoord;
     double tempx = mandelCoord.x - dx;
@@ -150,16 +116,6 @@ MandelCoord ttm(TextureCoord textureCoord) {
     return mandelCoord;
 }
 
-// Window 2
-MandelCoord ttm2(TextureCoord textureCoord) {
-    MandelCoord mandelCoord;
-
-    mandelCoord.x = textureCoord.x * 1.3 * ratio_xy - 0.5;
-    mandelCoord.y = textureCoord.y * 1.3;
-
-    return mandelCoord;
-}
-
 // Texture <=> Pixel
 
 TextureCoord ptt(PixelCoord pixelCoord) {
@@ -167,15 +123,6 @@ TextureCoord ptt(PixelCoord pixelCoord) {
 
     textureCoord.x = (pixelCoord.x * invW1 - 1) / viewScale1 + viewX1;
     textureCoord.y = ((windowH1 - pixelCoord.y) * invH1 - 1) / viewScale1 + viewY1;
-
-    return textureCoord;
-}
-
-TextureCoord ptt2(PixelCoord pixelCoord) {
-    TextureCoord textureCoord;
-
-    textureCoord.x = (pixelCoord.x * invW2 - 1) / viewScale2 + viewX2;
-    textureCoord.y = ((windowH2 - pixelCoord.y) * invH2 - 1) / viewScale2 + viewY2;
 
     return textureCoord;
 }

@@ -75,7 +75,7 @@ bool move2 = true;
 
 
 #define thresholdCount 3
-int32_t thresholds[thresholdCount] = {250, 5000, 32000};
+int32_t thresholds[thresholdCount] = {250, 8000, 32000};
 double thresholdColours[thresholdCount * 3] = {
     // 0.4, 0., 0.4, 
     0.3, 0.0, 0.5,
@@ -459,6 +459,7 @@ void _metrobrot(int thread) {
 
 void _mandelbrot(int thread) {
     int si, sj;
+    double rx, ry;
     double a, b;
     Particle result;
     bool _segmented = segmented;
@@ -469,8 +470,18 @@ void _mandelbrot(int thread) {
             si = UNI() * sampleSizeX;
             sj = UNI() * sampleSizeY;
 
-            a = xSamples[sampleSizeX * sj + si];
-            b = ySamples[sampleSizeX * sj + si];
+            if (si == 0)
+                rx = fabs(xSamples[sampleSizeX * sj + (si + 1)] - xSamples[sampleSizeX * sj + si]);
+            else
+                rx = fabs(xSamples[sampleSizeX * sj + (si - 1)] - xSamples[sampleSizeX * sj + si]);
+
+            if (sj == 0)
+                ry = fabs(xSamples[sampleSizeX * (sj + 1) + si] - xSamples[sampleSizeX * sj + si]);
+            else
+                ry = fabs(xSamples[sampleSizeX * (sj - 1) + si] - xSamples[sampleSizeX * sj + si]);
+
+            a = xSamples[sampleSizeX * sj + si] + RANDN() * rx;
+            b = ySamples[sampleSizeX * sj + si] + RANDN() * ry;
         }
         else {
             a = 2. * (4.5 * UNI() - 2.6);
@@ -506,6 +517,8 @@ void mandelbrot() {
 	}
 	
 	delete [] tt;
+
+    iterCount += iterations * threadCount * particleCount;
 }
 
 void _initParticles(int thread) {
@@ -641,6 +654,8 @@ void cleanup() {
 }
 
 void step() {
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    
     if (showDifference) {
         for (int i=0; i<size_x*size_y; i++) {
             frameFractal2[i] = 0;
@@ -651,17 +666,35 @@ void step() {
     }
 
     mandelbrot();
+    
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 
-    // if (showContrib) {
-        // processContrib();
-    // }
-    // else 
-    if (withColormap) {
-        processFractal2();
+    if (updateTexture) {
+        if (withColormap) {
+            processFractal2();
+        }
+        else {
+            processFractal();
+        }
     }
-    else {
-        processFractal();
+    
+    std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> time_span1 = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+    std::chrono::duration<double> time_span2 = std::chrono::duration_cast<std::chrono::duration<double>>(t3 - t2);
+    std::chrono::duration<double> time_span3 = std::chrono::duration_cast<std::chrono::duration<double>>(t3 - frameTime);
+    
+    double avgImpact = 0;
+    for (int i=0; i<threadCount; i++) {
+        for (int j=0; j<particleCount; j++) {
+            avgImpact += particles[i][j].impact;
+        }
     }
+    avgImpact /= threadCount * particleCount;
+
+    fprintf(stderr, "\rIterations = %llu, pixSum = %llu, Mandel time = %.4g, Process time = %.4g, Frame time = %.4g, impact = %g", 
+        iterCount, pixSum, time_span1.count(), time_span2.count(), time_span3.count(), avgImpact);
+    
+    frameTime = std::chrono::high_resolution_clock::now();
 }
 
 void drawBox() {
@@ -698,26 +731,7 @@ void drawGrid() {
 
 void display() {
     glutSetWindow(window1);
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
     step();
-    iterCount += iterations * threadCount;
-    
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> time_span1 = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - frameTime);
-    std::chrono::duration<double> time_span2 = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-    
-    double avgImpact = 0;
-    for (int i=0; i<threadCount; i++) {
-        for (int j=0; j<particleCount; j++) {
-            avgImpact += particles[i][j].impact;
-        }
-    }
-    avgImpact /= threadCount * particleCount;
-
-    fprintf(stderr, "\rIterations = %llu, pixSum = %llu, Frame time = %.4g, Step time = %.4g, impact = %g", 
-        iterCount, pixSum, time_span1.count(), time_span2.count(), avgImpact);
-    
-    frameTime = std::chrono::high_resolution_clock::now();
 
     if (updateTexture) {
         glClearColor( 0, 0, 0, 1 );
@@ -1049,6 +1063,8 @@ void keyPressed(unsigned char key, int x, int y) {
             drawScale = 2.;
             drawPower = 1. / drawScale;
             break;
+        case 'R':
+            clearData();
         case 'i':
             initParticles();
             break;
