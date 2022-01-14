@@ -38,8 +38,8 @@ double ratio_xy2 = (double)size_x2 / (double)size_y2;
 double ratio_yx2 = (double)size_y2 / (double)size_x2;
 
 // Viewport stuff window 1
-int windowW1 = 700;
-int windowH1 = 401;
+int windowW1 = 1400;
+int windowH1 = 801;
 
 double halfWindowW1 = windowW1 / 2.;
 double halfWindowH1 = windowH1 / 2.;
@@ -47,8 +47,8 @@ double invW1 = 2. / windowW1;
 double invH1 = 2. / windowH1;
 
 // Viewport stuff window 2
-int windowW2 = 700;
-int windowH2 = 401;
+int windowW2 = 1400;
+int windowH2 = 801;
 
 double halfWindowW2 = windowW2 / 2.;
 double halfWindowH2 = windowH2 / 2.;
@@ -190,8 +190,8 @@ MandelCoord ttm2(TextureCoord textureCoord) {
     tempx = textureCoord.x * scale2 * ratio_xy2;
     tempy = textureCoord.y * scale2;
 
-    mandelCoord.x = (cosTheta2 * tempx + sinTheta2 * tempy) + dx;
-    mandelCoord.y = (cosTheta2 * tempy - sinTheta2 * tempx) + dy;
+    mandelCoord.x = (cosTheta2 * tempx + sinTheta2 * tempy) + dx2;
+    mandelCoord.y = (cosTheta2 * tempy - sinTheta2 * tempx) + dy2;
 
     return mandelCoord;
 }
