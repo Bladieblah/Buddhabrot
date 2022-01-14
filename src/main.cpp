@@ -110,6 +110,7 @@ double dxHist[1000];
 double dyHist[1000];
 
 MandelCoord **path;
+MandelCoord **dpath;
 FractalCoord **ppath;
 
 double *xSamples;
@@ -150,11 +151,15 @@ int countUnique(FractalCoord *pixels, int len) {
     return count;
 }
 
-void mandelStep(MandelCoord *z, MandelCoord *c) {
+void mandelStep(MandelCoord *z, MandelCoord *c, MandelCoord *dz) {
     double temp = z->x * z->x - z->y * z->y + c->x;
 
     z->y = 2 * z->x * z->y + c->y;
     z->x = temp;
+
+    temp = 2 * (z->x * dz->x - z->y * dz->y) + 1;
+    dz->y = 2 * (z->x * dz->y + z->y * dz->x);
+    dz->x = temp;
 }
 
 void mutatePoint(MandelCoord *z, double spread) {
@@ -164,6 +169,7 @@ void mutatePoint(MandelCoord *z, double spread) {
 
 Particle converge(double a, double b, int thread, int particleIndex) {
     MandelCoord z({0., 0.});
+    MandelCoord dz({0., 0.});
     MandelCoord c({a, b});
     MandelCoord oldZ({0., 0.});
     Particle result({0, 0, 0, 0});
@@ -185,7 +191,7 @@ Particle converge(double a, double b, int thread, int particleIndex) {
 
     for (int i=0; i<imax; i++) {
         for (; j<thresholds[i]; j++) {
-            mandelStep(&z, &c);
+            mandelStep(&z, &c, &dz);
 
             if (z.x * z.x + z.y * z.y > escape) {
                 FractalCoord fc;
@@ -194,9 +200,12 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                 uint64_t hitCount = 0;
                 uint64_t pixCount = 0;
                 double impact = 0;
+                double derivRadius;
 
                 for (int k=0; k<j; k++) {
                     fc = mtf(path[thread][k]);
+
+                    derivRadius = scale2 / dpath()
 
                     if (fc.x < 0 || fc.x >= size_x || fc.y < 0 || fc.y >= size_y) {
                         continue;
@@ -312,6 +321,7 @@ Particle converge(double a, double b, int thread, int particleIndex) {
             }
 
             path[thread][j] = {z.x, z.y};
+            dpath[thread][j] = {dz.x, dz.y};
         }
     }
 
@@ -628,12 +638,14 @@ void prepare() {
     data2 = (uint32_t *)malloc(12 * size_x * size_y * sizeof(uint32_t));
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
+    dpath = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));
 
     particles = (Particle **)malloc(threadCount * sizeof(Particle *));
 
     for (int i=0; i<threadCount; i++) {
         path[i] = (MandelCoord *)malloc(thresholds[thresholdCount-1] * sizeof(MandelCoord));
+        dpath[i] = (MandelCoord *)malloc(thresholds[thresholdCount-1] * sizeof(MandelCoord));
         ppath[i] = (FractalCoord *)malloc(2 * thresholds[thresholdCount-1] * sizeof(FractalCoord));
         particles[i] = (Particle *)malloc(particleCount * sizeof(Particle));
     }
