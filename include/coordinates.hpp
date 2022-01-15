@@ -75,6 +75,7 @@ extern double drawPower;
 
 
 void updateFractalVars();
+void updateFractalVars2();
 
 // Coordinate systems
 

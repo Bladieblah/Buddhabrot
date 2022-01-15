@@ -46,6 +46,8 @@ size_t local_item_size[2] = {(size_t)size_x, (size_t)size_y};
 // Mouse
 int mouse_x_down, mouse_x_up;
 int mouse_y_down, mouse_y_up;
+int mouse_x_down2, mouse_x_up2;
+int mouse_y_down2, mouse_y_up2;
 int mouse_state_1 = GLUT_UP;
 int mouse_state_2 = GLUT_UP;
 
@@ -57,6 +59,7 @@ int kmax = 800;
 double escape = 25;
 
 bool transform = true;
+bool transform2 = true;
 bool withColormap = false;
 bool showColorBar = true;
 bool shouldDrawGrid = false;
@@ -103,11 +106,17 @@ void echo(const char *text) {
 }
 
 int viewIndex = 0;
+int viewIndex2 = 0;
 
 double scaleHist[1000];
 double thetaHist[1000];
 double dxHist[1000];
 double dyHist[1000];
+
+double scaleHist2[1000];
+double thetaHist2[1000];
+double dxHist2[1000];
+double dyHist2[1000];
 
 MandelCoord **path;
 FractalCoord **ppath;
@@ -733,6 +742,27 @@ void drawBox() {
     glEnd();
 }
 
+void drawBox2() {
+    double xc = 2 * mouse_x_down2 / (double)windowW2 - 1;
+    double yc = 1 - 2 * mouse_y_down2 / (double)windowH2;
+
+    double dx1 = 2 * (mouse_x_up2 - mouse_x_down2) / (double)windowW2;
+    double dy1 = -2 * (mouse_y_up2 - mouse_y_down2) / (double)windowH2;
+
+    double dx2 = 2 * (mouse_y_up2 - mouse_y_down2) * ratio_xy2 / windowW2;
+    double dy2 = 2 * (mouse_x_up2 - mouse_x_down2) * ratio_xy2 / windowH2;
+
+    glColor4f(1,1,1,1);
+
+    glBegin(GL_LINE_STRIP);
+        glVertex2f(xc + dx1 + dx2, yc + dy1 + dy2);
+        glVertex2f(xc + dx1 - dx2, yc + dy1 - dy2);
+        glVertex2f(xc - dx1 - dx2, yc - dy1 - dy2);
+        glVertex2f(xc - dx1 + dx2, yc - dy1 + dy2);
+        glVertex2f(xc + dx1 + dx2, yc + dy1 + dy2);
+    glEnd();
+}
+
 void drawGrid() {
     glBegin(GL_LINES);
         glVertex2f(-1,0); glVertex2f(1,0);
@@ -748,6 +778,7 @@ void drawPath() {
     PixelCoord pc({mouse_x2, mouse_y2});
     MandelCoord mc = ttm2(ptt2(pc));
     MandelCoord z({0,0});
+    MandelCoord dz({0,0});
     TextureCoord tc;
 
     
@@ -759,16 +790,99 @@ void drawPath() {
     glColor3f(0, 1, 0);
     tc = mtt(z);
     glVertex2f(tc.x, tc.y);
+    dz = {
+        2 * (z.x * dz.x - z.y * dz.y) + 1,
+        2 * (z.x * dz.y + z.y * dz.x)
+    };
     mandelStep(&z, &mc);
     
     glColor3f(1, 1, 0);
     tc = mtt(z);
     glVertex2f(tc.x, tc.y);
+    dz = {
+        2 * (z.x * dz.x - z.y * dz.y) + 1,
+        2 * (z.x * dz.y + z.y * dz.x)
+    };
     mandelStep(&z, &mc);
 
     glColor3f(1, 1, 1);
 
     for (int i=2; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
+
+        if (i <= 10) {
+            dz = {
+                2 * (z.x * dz.x - z.y * dz.y) + 1,
+                2 * (z.x * dz.y + z.y * dz.x)
+            };
+        }
+        mandelStep(&z, &mc);
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+
+    double dNorm = sqrt(dz.x * dz.x + dz.y * dz.y);
+    double offset = (5 * scaleDouble) / dNorm;
+    
+    glPointSize(2);
+    z = {0,0};
+    mc.x += dz.x / dNorm * offset;
+    mc.y += dz.y / dNorm * offset;
+
+    glColor3f(1.0, 0.0, 0.0);
+
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
+        mandelStep(&z, &mc);
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+    
+    z = {0,0};
+    // mc.x += dz.x / dNorm * offset;
+    mc.y -= 2 * dz.y / dNorm * offset;
+
+    glColor3f(0.75, 0.25, 0.0);
+
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
+        mandelStep(&z, &mc);
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+    
+    z = {0,0};
+    mc.x -= 2 * dz.x / dNorm * offset;
+    // mc.y -= 2 * dz.y / dNorm * offset;
+
+    glColor3f(0.5, 0.5, 0.0);
+
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
+        mandelStep(&z, &mc);
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+    
+    z = {0,0};
+    // mc.x += dz.x / dNorm * offset;
+    mc.y += 2 * dz.y / dNorm * offset;
+
+    glColor3f(0.25, 0.75, 0.0);
+
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
         tc = mtt(z);
         glVertex2f(tc.x, tc.y);
         mandelStep(&z, &mc);
@@ -779,6 +893,7 @@ void drawPath() {
     }
 
     glEnd();
+    glColor3f(1, 1, 1);
 }
 
 void display() {
@@ -1047,6 +1162,30 @@ void setCoordinates(double _scale, double _theta, double _dx, double _dy) {
     echo("Done");
 }
 
+void setCoordinates2(double _scale, double _theta, double _dx, double _dy) {
+    scaleHist2[viewIndex2] = scale2;
+    thetaHist2[viewIndex2] = theta2;
+    dxHist2[viewIndex2] = dx2;
+    dyHist2[viewIndex2] = dy2;
+
+    fprintf(stderr, "\nscale2 (%f -> %f)\n", scale2, _scale);
+    fprintf(stderr, "theta2 (%f -> %f)\n", theta2, _theta);
+    fprintf(stderr, "dx2 (%f -> %f)\n", dx2, _dx);
+    fprintf(stderr, "dy2 (%f -> %f)\n", dy2, _dy);
+
+    scale2 = _scale;
+    theta2 = _theta;
+    dx2 = _dx;
+    dy2 = _dy;
+
+    viewIndex2++;
+    updateFractalVars2();
+    
+    for (int i=0; i<size_x2 * size_y2; i++) {
+        fractalContrib[i] = 0;
+    }
+}
+
 void selectRegion() {
     if (!transform || mouse_state_1 != GLUT_DOWN) {
         return;
@@ -1059,6 +1198,25 @@ void selectRegion() {
     MandelCoord mTop = ttm(ptt(pTop));
 
     setCoordinates(
+        sqrt(pow(mTop.x - mCenter.x, 2) + pow(mTop.y - mCenter.y, 2)),
+        atan2(mTop.x - mCenter.x, mTop.y - mCenter.y),
+        mCenter.x,
+        mCenter.y
+    );
+}
+
+void selectRegion2() {
+    if (!transform2 || mouse_state_2 != GLUT_DOWN) {
+        return;
+    }
+
+    PixelCoord pCenter({mouse_x_down2, mouse_y_down2});
+    PixelCoord pTop({mouse_x_up2, mouse_y_up2});
+
+    MandelCoord mCenter = ttm2(ptt2(pCenter));
+    MandelCoord mTop = ttm2(ptt2(pTop));
+
+    setCoordinates2(
         sqrt(pow(mTop.x - mCenter.x, 2) + pow(mTop.y - mCenter.y, 2)),
         atan2(mTop.x - mCenter.x, mTop.y - mCenter.y),
         mCenter.x,
@@ -1086,6 +1244,24 @@ void revertCoordinates() {
         initParticles();
         echo("Done");
     }
+}
+
+void revertCoordinates2() {
+    if (viewIndex2 == 0) {
+        return;
+    }
+
+    viewIndex2--;
+    
+    scale2 = scaleHist2[viewIndex2];
+    theta2 = thetaHist2[viewIndex2];
+    dx2 = dxHist2[viewIndex2];
+    dy2 = dyHist2[viewIndex2];
+    
+    for (int i=0; i<size_x2 * size_y2; i++) {
+        fractalContrib[i] = 0;
+    }
+    updateFractalVars2();
 }
 
 void keyPressed(unsigned char key, int x, int y) {
@@ -1202,6 +1378,10 @@ void keyPressed2(unsigned char key, int x, int y) {
             move2 = !move2;
             fprintf(stderr, "Set move2 to %d\n", move2);
             break;
+        case 'y':
+            transform2 = !transform2;
+            fprintf(stderr, "Set transform2 to %d\n", transform2);
+            break;
         case 'm':
             drawScale *= 1.1;
             drawPower = 1. / drawScale;
@@ -1214,6 +1394,12 @@ void keyPressed2(unsigned char key, int x, int y) {
             viewX2 = 0.;
             viewY2 = 0.;
             viewScale2 = 1.;
+            break;
+        case 'z':
+            revertCoordinates2();
+            break;
+        case 'a':
+            selectRegion2();
             break;
         case 'q':
         	cleanup();
@@ -1268,14 +1454,14 @@ void mouseFunc2(int button, int state, int x, int y) {
     mouse_y2 = y;
 
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        if (!move2) {
-            mouse_x_down = x;
-            mouse_y_down = y;
-            mouse_state_2 = state;
-        }
-        else {
+        if (move2) {
             viewX2 = viewX2 + (2 * x / (double)windowW2 - 1) / viewScale2;
             viewY2 = viewY2 - (2 * y / (double)windowH2 - 1) / viewScale2;
+        }
+        else {
+            mouse_x_down2 = x;
+            mouse_y_down2 = y;
+            mouse_state_2 = state;
         }
 	}
 
@@ -1292,6 +1478,8 @@ void motionFunc(int x, int y) {
 void motionFunc2(int x, int y) {
     mouse_x2 = x;
     mouse_y2 = y;
+    mouse_x_up2 = x;
+    mouse_y_up2 = y;
 }
 
 void reshape(int w, int h)
@@ -1371,9 +1559,9 @@ void display2() {
             drawGrid();
         }
 
-        // if (mouse_state_2 == GLUT_DOWN) {
-        //     drawBox();
-        // }
+        if (mouse_state_2 == GLUT_DOWN && transform2) {
+            drawBox2();
+        }
         glFlush();
         glutSwapBuffers();
     }

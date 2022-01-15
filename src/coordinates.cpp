@@ -38,8 +38,10 @@ double ratio_xy2 = (double)size_x2 / (double)size_y2;
 double ratio_yx2 = (double)size_y2 / (double)size_x2;
 
 // Viewport stuff window 1
-int windowW1 = 1400;
-int windowH1 = 801;
+// int windowW1 = 1400;
+// int windowH1 = 801;
+int windowW1 = 700;
+int windowH1 = 401;
 
 double halfWindowW1 = windowW1 / 2.;
 double halfWindowH1 = windowH1 / 2.;
@@ -47,8 +49,10 @@ double invW1 = 2. / windowW1;
 double invH1 = 2. / windowH1;
 
 // Viewport stuff window 2
-int windowW2 = 1400;
-int windowH2 = 801;
+// int windowW2 = 1400;
+// int windowH2 = 801;
+int windowW2 = 700;
+int windowH2 = 401;
 
 double halfWindowW2 = windowW2 / 2.;
 double halfWindowH2 = windowH2 / 2.;
@@ -74,6 +78,13 @@ void updateFractalVars() {
     scaleDouble = 2 * scale / size_y;
     sinTheta = sin(theta);
     cosTheta = cos(theta);
+}
+
+void updateFractalVars2() {
+    invScale2 = 1. / scale2;
+    scaleDouble2 = 2 * scale2 / size_y2;
+    sinTheta2 = sin(theta2);
+    cosTheta2 = cos(theta2);
 }
 
 // Mandel <=> Fractal
