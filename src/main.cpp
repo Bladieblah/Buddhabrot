@@ -100,10 +100,10 @@ double thresholdColours[thresholdCount * 3] = {
 //     // 0., 0., 1.
 // };
 uint64_t maxVals[thresholdCount] = {0};
-uint64_t fractal[size_y * size_x * thresholdCount] = {0};
-uint64_t frameFractal[size_y * size_x * thresholdCount] = {0};
-uint64_t fractal2[size_y * size_x] = {0};
-uint64_t frameFractal2[size_y * size_x] = {0};
+uint64_t *fractal;
+uint64_t *frameFractal;
+uint64_t *fractal2;
+uint64_t *frameFractal2;
 uint64_t maxVal = 0;
 uint64_t pixSum = 0;
 
@@ -707,6 +707,11 @@ void prepare() {
 
     data2 = (uint32_t *)malloc(3 * size_x2 * size_y2 * sizeof(uint32_t));
     fractalContrib = (double *)malloc(size_x2 * size_y2 * sizeof(double));
+
+    fractal = (uint64_t *)malloc(size_y * size_x * thresholdCount * sizeof(uint64_t));
+    frameFractal = (uint64_t *)malloc(size_y * size_x * thresholdCount * sizeof(uint64_t));
+    fractal2 = (uint64_t *)malloc(size_y * size_x * sizeof(uint64_t));
+    frameFractal2 = (uint64_t *)malloc(size_y * size_x * sizeof(uint64_t));
     
     path = (MandelCoord **)malloc(threadCount * sizeof(MandelCoord *));
     ppath = (FractalCoord **)malloc(threadCount * sizeof(FractalCoord *));

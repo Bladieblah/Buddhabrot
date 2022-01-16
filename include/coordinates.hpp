@@ -4,8 +4,10 @@
 // Fractal size
 // #define size_x 5120
 // #define size_y 2881
-#define size_x 1400
-#define size_y 801
+#define size_x 6048
+#define size_y 3928
+// #define size_x 1400
+// #define size_y 801
 #define size_x2 2600
 #define size_y2 2000
 
