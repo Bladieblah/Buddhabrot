@@ -71,6 +71,7 @@ bool segmented = true;
 bool showContrib = false;
 bool updateTexture = true;
 bool onlyBackground = false;
+bool limitParticles = false;
 
 bool move2 = true;
 
@@ -469,6 +470,12 @@ MandelCoord mutateParticle(int thread, int particle) {
         // result.x = 2 * particles[thread][particle].x + RANDN() * fmin(scale, 1e-1);
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
+    else if (limitParticles) {
+        result = ttm2({
+            2. * UNI() - 1.,
+            2. * UNI() - 1.
+        });
+    }
     else if (targetedRandom) {
         int si = UNI() * sampleSizeX;
         int sj = UNI() * sampleSizeY;
@@ -578,16 +585,27 @@ void _initParticles(int thread) {
     int j, k, si, sj;
     double a, b;
     Particle result;
+    MandelCoord mc;
+    int kmax = 5000;
 
     for (j=0; j<particleCount; j++) {
-        for (k=0; k<10000; k++) {
-            // a = 4.5 * UNI() - 2.6;
-            // b = 3.0 * UNI() - 1.5;
-            si = UNI() * sampleSizeX;
-            sj = UNI() * sampleSizeY;
+        for (k=0; k<kmax; k++) {
+            if (limitParticles) {
+                mc = ttm2({
+                    2. * UNI() - 1.,
+                    2. * UNI() - 1.
+                });
 
-            a = xSamples[sampleSizeX * sj + si];
-            b = ySamples[sampleSizeX * sj + si];
+                a = mc.x;
+                b = mc.y;
+            }
+            else {
+                si = UNI() * sampleSizeX;
+                sj = UNI() * sampleSizeY;
+
+                a = xSamples[sampleSizeX * sj + si];
+                b = ySamples[sampleSizeX * sj + si];
+            }
 
             result = converge(a, b, thread, j);
 
@@ -597,7 +615,7 @@ void _initParticles(int thread) {
             }
         }
 
-        if (k == 100000) {
+        if (k == kmax) {
             echo("Well ffs >:U");
             particles[thread][j] = result;
         }
@@ -1431,6 +1449,10 @@ void keyPressed2(unsigned char key, int x, int y) {
         case 'p':
             showParticles = !showParticles;
             fprintf(stderr, "Set showParticles to %d\n", showParticles);
+            break;
+        case 'l':
+            limitParticles = !limitParticles;
+            fprintf(stderr, "Set limitParticles to %d\n", limitParticles);
             break;
         case 'm':
             drawScale *= 1.1;
