@@ -76,20 +76,29 @@ bool limitParticles = false;
 bool move2 = true;
 
 
-#define thresholdCount 3
-int32_t thresholds[thresholdCount] = {250, 5000, 32000};
+#define thresholdCount 4
+int32_t thresholds[thresholdCount] = {250, 5000, 32000, 64000};
 double thresholdColours[thresholdCount * 3] = {
-    // 0.4, 0., 0.4, 
     0.3, 0.0, 0.5,
     0.0, 0.5, 0.3,
-    // 0.0, 0.25, 0.15,
     0.6, 0.5, 0.0,
-    // 0.3, 0.25, 0.0,
-    // 0.,0.,0.,
-    // 1., 0., 0.
-    // 0., 1., 0.,
-    // 0., 0., 1.
+    0.1, 0.0, 0.2,
 };
+// #define thresholdCount 6
+// int32_t thresholds[thresholdCount] = {250, 5000, 30000, 31000, 32000, 33000};
+// double thresholdColours[thresholdCount * 3] = {
+//     0.2, 0.0, 0.25,
+//     0.0, 0.25, 0.15,
+//     0.3, 0.25, 0.0,
+//     0.5, 0.0, 0.0,
+//     0.0, 0.5, 0.0,
+//     0.0, 0.0, 0.5
+//     // 0.3, 0.25, 0.0,
+//     // 0.,0.,0.,
+//     // 1., 0., 0.
+//     // 0., 1., 0.,
+//     // 0., 0., 1.
+// };
 uint64_t maxVals[thresholdCount] = {0};
 uint64_t fractal[size_y * size_x * thresholdCount] = {0};
 uint64_t frameFractal[size_y * size_x * thresholdCount] = {0};
@@ -1390,7 +1399,7 @@ void keyPressed(unsigned char key, int x, int y) {
         case 'i':
             initParticles();
             break;
-        case 'z':
+        case 'Z':
             revertCoordinates();
             break;
         case 'j':
