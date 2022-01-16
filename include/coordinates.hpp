@@ -104,6 +104,7 @@ FractalCoord mtf(MandelCoord mandelCoord);
 FractalCoord mtf2(MandelCoord mandelCoord);
 FractalCoord mtfMirror(MandelCoord mandelCoord);
 TextureCoord mtt(MandelCoord mandelCoord);
+TextureCoord mtt2(MandelCoord mandelCoord);
 MandelCoord ttm(TextureCoord textureCoord);
 MandelCoord ttm2(TextureCoord textureCoord);
 TextureCoord ptt(PixelCoord pixelCoord);

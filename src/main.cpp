@@ -63,6 +63,7 @@ bool transform2 = true;
 bool withColormap = false;
 bool showColorBar = true;
 bool shouldDrawGrid = false;
+bool showParticles = false;
 bool targetedRandom = false;
 bool naiveBuddha = true;
 bool showDifference = false;
@@ -130,10 +131,11 @@ int sampleSizeY = 5000;
 typedef struct Particle {
     double x, y;
     uint64_t len, hitCount;
-    double impact = 0;
+    double impact = 0, score = 0;
 } Particle;
 
 Particle **particles;
+double avgImpact;
 
 bool pixelSort(const FractalCoord &p1, const FractalCoord &p2) {
     if (p1.x != p2.x) {
@@ -316,7 +318,12 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                     }
                 }
 
-                result = {a, b, j, hitCount, impact};
+                double score = 
+                    pow(hitCount, 1)
+                    // * pow(j, 1)
+                    * pow(impact, 6)
+                ;
+                result = {a, b, j, hitCount, impact, score};
 
                 return result;
             }
@@ -439,12 +446,26 @@ void processContrib2() {
     }
 }
 
+MandelCoord getDerivative(int thread) {
+    MandelCoord dz = {0,0};
+    
+    for (int i=0; i<11; i++) {
+        dz = {
+            2 * (path[thread][i].x * dz.x - path[thread][i].y * dz.y) + 1,
+            2 * (path[thread][i].x * dz.y + path[thread][i].y * dz.x)
+        };
+    }
+
+    return dz;
+}
+
 MandelCoord mutateParticle(int thread, int particle) {
     MandelCoord result;
 
-    if (UNI() < 0.5) {
-        result.x = particles[thread][particle].x + RANDN() / (1 + pow(particles[thread][particle].len, 1.2));
-        result.y = particles[thread][particle].y + RANDN() / (1 + pow(particles[thread][particle].len, 1.2));
+    if (UNI() < 0.95) {
+        MandelCoord dz = getDerivative(thread);
+        result.x = particles[thread][particle].x + RANDN() * scaleDouble * dz.x;
+        result.y = particles[thread][particle].y + RANDN() * scaleDouble * dz.y;
         // result.x = 2 * particles[thread][particle].x + RANDN() * fmin(scale, 1e-1);
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
@@ -493,10 +514,7 @@ void _metrobrot(int thread) {
             }
 
             particles[thread][i].impact *= 0.95;
-            prob = pow(result.hitCount / (double)particles[thread][i].hitCount, 4)
-                * pow(result.len / (double)particles[thread][i].len, 1)
-                * pow(result.impact / (double)particles[thread][i].impact, 2)
-            ;
+            prob = result.score / particles[thread][i].score;
 
             if (UNI() < prob) {
                 particles[thread][i] = result;
@@ -781,7 +799,6 @@ void drawPath() {
     MandelCoord dz({0,0});
     TextureCoord tc;
 
-    
     glPointSize(6);
     glEnable(GL_POINT_SMOOTH);
     
@@ -896,6 +913,35 @@ void drawPath() {
     glColor3f(1, 1, 1);
 }
 
+void drawParticles() {
+    int i, j;
+    double hcMax, imMax, scMax;
+    TextureCoord tc;
+
+    glPointSize(2);
+    glEnable(GL_POINT_SMOOTH);
+    
+    glBegin(GL_POINTS);
+
+    for (i=0; i<threadCount; i++) {
+        for (j=0; j<particleCount; j++) {
+            hcMax = fmax(hcMax, particles[i][j].hitCount);
+            imMax = fmax(imMax, particles[i][j].impact);
+            scMax = fmax(scMax, particles[i][j].score);
+        }
+    }
+
+    for (i=0; i<threadCount; i++) {
+        for (j=0; j<particleCount; j++) {
+            tc = mtt2({particles[i][j].x, particles[i][j].y});
+            glColor3f(particles[i][j].impact / imMax, particles[i][j].hitCount / hcMax, particles[i][j].score / scMax);
+            glVertex2f(tc.x, tc.y);
+        }
+    }
+
+    glEnd();
+}
+
 void display() {
     glutSetWindow(window1);
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -906,7 +952,7 @@ void display() {
     std::chrono::duration<double> time_span1 = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - frameTime);
     std::chrono::duration<double> time_span2 = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
     
-    double avgImpact = 0;
+    avgImpact = 0;
     for (int i=0; i<threadCount; i++) {
         for (int j=0; j<particleCount; j++) {
             avgImpact += particles[i][j].impact;
@@ -1382,6 +1428,10 @@ void keyPressed2(unsigned char key, int x, int y) {
             transform2 = !transform2;
             fprintf(stderr, "Set transform2 to %d\n", transform2);
             break;
+        case 'p':
+            showParticles = !showParticles;
+            fprintf(stderr, "Set showParticles to %d\n", showParticles);
+            break;
         case 'm':
             drawScale *= 1.1;
             drawPower = 1. / drawScale;
@@ -1562,6 +1612,11 @@ void display2() {
         if (mouse_state_2 == GLUT_DOWN && transform2) {
             drawBox2();
         }
+
+        if (showParticles) {
+            drawParticles();
+        }
+
         glFlush();
         glutSwapBuffers();
     }

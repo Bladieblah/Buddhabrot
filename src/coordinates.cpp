@@ -180,6 +180,19 @@ TextureCoord mtt(MandelCoord mandelCoord) {
     return textureCoord;
 }
 
+TextureCoord mtt2(MandelCoord mandelCoord) {
+    TextureCoord textureCoord;
+    double tempx, tempy;
+
+    tempx = mandelCoord.x - dx2;
+    tempy = mandelCoord.y - dy2;
+
+    textureCoord.x = (cosTheta2 * tempx - sinTheta2 * tempy) * invScale2 * ratio_yx2;
+    textureCoord.y = (cosTheta2 * tempy + sinTheta2 * tempx) * invScale2;
+
+    return textureCoord;
+}
+
 MandelCoord ttm(TextureCoord textureCoord) {
     MandelCoord mandelCoord;
     double tempx, tempy;
