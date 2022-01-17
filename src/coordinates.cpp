@@ -258,3 +258,29 @@ bool operator==(const FractalCoord& p1, const FractalCoord& p2) {
 bool operator!=(const FractalCoord& p1, const FractalCoord& p2) {
     return (p1.x != p2.x || p1.y != p2.y);
 }
+
+MandelCoord operator*(const MandelCoord& m1, const MandelCoord& m2) {
+    return {m1.x * m2.x - m1.y * m2.y, m1.x * m2.y + m1.y * m2.x};
+}
+
+MandelCoord operator+(const MandelCoord& m1, const MandelCoord& m2) {
+    return {m1.x + m2.x, m1.y + m2.y};
+}
+
+MandelCoord operator-(const MandelCoord& m1, const MandelCoord& m2) {
+    return {m1.x - m2.x, m1.y - m2.y};
+}
+
+MandelCoord operator/(const MandelCoord& m1, const MandelCoord& m2) {
+    return {
+        (m1.x * m2.x + m1.y * m2.y) / (m1.x * m1.x + m2.y * m2.y), 
+        (m1.y * m2.x - m1.x * m2.y) / (m2.x * m2.x + m2.y * m2.y)
+    };
+}
+
+MandelCoord mandelSin(MandelCoord m) {
+    double epz = exp(m.y);
+    double emz = exp(-m.y);
+    
+    return {0.5 * sin(m.x) * (epz + emz), 0.5 * cos(m.x) * (epz - emz)};
+}

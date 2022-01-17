@@ -178,6 +178,12 @@ void mandelStep(MandelCoord *z, MandelCoord *c) {
     z->x = temp;
 }
 
+MandelCoord waveStep(MandelCoord z) {
+    MandelCoord sz = mandelSin(z * z);
+    MandelCoord frac = z + (z - sz) / (z + sz);
+    return frac * frac;
+}
+
 void mutatePoint(MandelCoord *z, double spread) {
     z->x += RANDN() * spread;
     z->y += RANDN() * spread;
@@ -763,11 +769,13 @@ void step() {
         // processContrib();
     // }
     // else 
-    if (withColormap) {
-        processFractal2();
-    }
-    else {
-        processFractal();
+    if (updateTexture) {
+        if (withColormap) {
+            processFractal2();
+        }
+        else {
+            processFractal();
+        }
     }
 }
 

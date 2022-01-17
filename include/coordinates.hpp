@@ -115,5 +115,11 @@ PixelCoord ttp(TextureCoord textureCoord);
 
 bool operator==(const FractalCoord& p1, const FractalCoord& p2);
 bool operator!=(const FractalCoord& p1, const FractalCoord& p2);
+MandelCoord operator+(const MandelCoord& m1, const MandelCoord& m2);
+MandelCoord operator-(const MandelCoord& m1, const MandelCoord& m2);
+MandelCoord operator/(const MandelCoord& m1, const MandelCoord& m2);
+MandelCoord operator*(const MandelCoord& m1, const MandelCoord& m2);
+MandelCoord mandelSin(MandelCoord m);
+MandelCoord mandelDiv(MandelCoord m1, MandelCoord m2);
 
 #endif
