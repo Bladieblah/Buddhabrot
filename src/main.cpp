@@ -21,6 +21,9 @@
 // For loading shader files
 #define MAX_SOURCE_SIZE (0x100000)
 
+// Switch fractal
+// #define WAVE_FRACTAL
+
 #define iterations 20
 #define particleCountSqrt 20
 #define particleCount (particleCountSqrt * particleCountSqrt)
@@ -56,7 +59,7 @@ int mouse_y2 = 0;
 
 // Mandelbrot config
 int kmax = 800;
-double escape = 25;
+double escape = 64;
 
 bool transform = true;
 bool transform2 = true;
@@ -77,7 +80,13 @@ bool move2 = true;
 
 
 #define thresholdCount 4
+
+#ifdef WAVE_FRACTAL
+int32_t thresholds[thresholdCount] = {20, 50, 100, 200};
+#else
 int32_t thresholds[thresholdCount] = {250, 5000, 32000, 64000};
+#endif
+
 double thresholdColours[thresholdCount * 3] = {
     0.3, 0.0, 0.5,
     0.0, 0.5, 0.3,
@@ -178,10 +187,28 @@ void mandelStep(MandelCoord *z, MandelCoord *c) {
     z->x = temp;
 }
 
+
+MandelCoord mandelDeriv(MandelCoord z, MandelCoord dz) {
+    return {
+        2 * (z.x * dz.x - z.y * dz.y) + 1,
+        2 * (z.x * dz.y + z.y * dz.x)
+    };
+}
+
 MandelCoord waveStep(MandelCoord z) {
     MandelCoord sz = mandelSin(z * z);
     MandelCoord frac = z + (z - sz) / (z + sz);
     return frac * frac;
+}
+
+MandelCoord waveDeriv(MandelCoord z, MandelCoord dz) {
+    MandelCoord z2 = z * z;
+    MandelCoord sz = mandelSin(z2);
+    MandelCoord cz = mandelCos(z2);
+    MandelCoord cz2 = mandelCos(z2 * 2);
+    MandelCoord denom = sz + z;
+
+    return (z2 + z * sz - sz + z) * (z2 * -2 + (z * -2 - 2) * sz + z2 * cz * 8 + cz2 - 1) / (denom * denom * denom);
 }
 
 void mutatePoint(MandelCoord *z, double spread) {
@@ -190,18 +217,24 @@ void mutatePoint(MandelCoord *z, double spread) {
 }
 
 Particle converge(double a, double b, int thread, int particleIndex) {
+#ifdef WAVE_FRACTAL
+    MandelCoord z({a, b});
+#else
     MandelCoord z({0., 0.});
+#endif
     MandelCoord c({a, b});
     MandelCoord oldZ({0., 0.});
     Particle result({0, 0, 0, 0});
 
     double c2 = a*a + b*b;
     int stepLimit = 2;
-    
+
+#ifndef WAVE_FRACTAL
     // Check if c in main or secondary bulb
     if (256.0*c2*c2 - 96.0*c2 + 32.0*a - 3.0 < 0.0 || 16.0*(c2 + 2.0 * a + 1.0) - 1.0 < 0.0) {
         return result;
     }
+#endif
     
     uint64_t j=0;
 
@@ -212,7 +245,11 @@ Particle converge(double a, double b, int thread, int particleIndex) {
 
     for (int i=0; i<imax; i++) {
         for (; j<thresholds[i]; j++) {
+#ifdef WAVE_FRACTAL
+            z = waveStep(z);
+#else
             mandelStep(&z, &c);
+#endif
 
             if (z.x * z.x + z.y * z.y > escape) {
                 FractalCoord fc;
@@ -466,10 +503,11 @@ MandelCoord getDerivative(int thread) {
     MandelCoord dz = {0,0};
     
     for (int i=0; i<11; i++) {
-        dz = {
-            2 * (path[thread][i].x * dz.x - path[thread][i].y * dz.y) + 1,
-            2 * (path[thread][i].x * dz.y + path[thread][i].y * dz.x)
-        };
+#ifdef WAVE_FRACTAL
+        dz = waveDeriv(path[thread][i], dz);
+#else
+        dz = mandelDeriv(path[thread][i], dz);
+#endif
     }
 
     return dz;
@@ -832,10 +870,33 @@ void drawGrid() {
     glEnd();
 }
 
+void _drawPath(MandelCoord z, MandelCoord mc) {
+    TextureCoord tc;
+#ifdef WAVE_FRACTAL
+    z = mc;
+#endif
+    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
+        tc = mtt(z);
+        glVertex2f(tc.x, tc.y);
+#ifdef WAVE_FRACTAL
+        z = waveStep(z);
+#else
+        mandelStep(&z, &mc);
+#endif
+
+        if (z.x * z.x + z.y * z.y > 25) {
+            break;
+        }
+    }
+}
+
 void drawPath() {
     PixelCoord pc({mouse_x2, mouse_y2});
     MandelCoord mc = ttm2(ptt2(pc));
     MandelCoord z({0,0});
+#ifdef WAVE_FRACTAL
+    z = mc;
+#endif
     MandelCoord dz({0,0});
     TextureCoord tc;
 
@@ -847,20 +908,23 @@ void drawPath() {
     glColor3f(0, 1, 0);
     tc = mtt(z);
     glVertex2f(tc.x, tc.y);
-    dz = {
-        2 * (z.x * dz.x - z.y * dz.y) + 1,
-        2 * (z.x * dz.y + z.y * dz.x)
-    };
+#ifdef WAVE_FRACTAL
+    dz = waveDeriv(z, dz);
+    z = waveStep(z);
+#else
+    dz = mandelDeriv(z, dz);
     mandelStep(&z, &mc);
+#endif
     
     glColor3f(1, 1, 0);
     tc = mtt(z);
     glVertex2f(tc.x, tc.y);
-    dz = {
-        2 * (z.x * dz.x - z.y * dz.y) + 1,
-        2 * (z.x * dz.y + z.y * dz.x)
-    };
+    dz = mandelDeriv(z, dz);
+#ifdef WAVE_FRACTAL
+    z = waveStep(z);
+#else
     mandelStep(&z, &mc);
+#endif
 
     glColor3f(1, 1, 1);
 
@@ -869,12 +933,13 @@ void drawPath() {
         glVertex2f(tc.x, tc.y);
 
         if (i <= 10) {
-            dz = {
-                2 * (z.x * dz.x - z.y * dz.y) + 1,
-                2 * (z.x * dz.y + z.y * dz.x)
-            };
+            dz = mandelDeriv(z, dz);
         }
+#ifdef WAVE_FRACTAL
+        z = waveStep(z);
+#else
         mandelStep(&z, &mc);
+#endif
 
         if (z.x * z.x + z.y * z.y > 25) {
             break;
@@ -888,66 +953,23 @@ void drawPath() {
     z = {0,0};
     mc.x += dz.x / dNorm * offset;
     mc.y += dz.y / dNorm * offset;
-
     glColor3f(1.0, 0.0, 0.0);
-
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        tc = mtt(z);
-        glVertex2f(tc.x, tc.y);
-        mandelStep(&z, &mc);
-
-        if (z.x * z.x + z.y * z.y > 25) {
-            break;
-        }
-    }
+    _drawPath(z, mc);
     
     z = {0,0};
-    // mc.x += dz.x / dNorm * offset;
     mc.y -= 2 * dz.y / dNorm * offset;
-
     glColor3f(0.75, 0.25, 0.0);
+    _drawPath(z, mc);
 
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        tc = mtt(z);
-        glVertex2f(tc.x, tc.y);
-        mandelStep(&z, &mc);
-
-        if (z.x * z.x + z.y * z.y > 25) {
-            break;
-        }
-    }
-    
     z = {0,0};
     mc.x -= 2 * dz.x / dNorm * offset;
-    // mc.y -= 2 * dz.y / dNorm * offset;
-
     glColor3f(0.5, 0.5, 0.0);
-
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        tc = mtt(z);
-        glVertex2f(tc.x, tc.y);
-        mandelStep(&z, &mc);
-
-        if (z.x * z.x + z.y * z.y > 25) {
-            break;
-        }
-    }
+    _drawPath(z, mc);
     
     z = {0,0};
-    // mc.x += dz.x / dNorm * offset;
     mc.y += 2 * dz.y / dNorm * offset;
-
     glColor3f(0.25, 0.75, 0.0);
-
-    for (int i=0; i<thresholds[thresholdCount-1]; i++) {
-        tc = mtt(z);
-        glVertex2f(tc.x, tc.y);
-        mandelStep(&z, &mc);
-
-        if (z.x * z.x + z.y * z.y > 25) {
-            break;
-        }
-    }
+    _drawPath(z, mc);
 
     glEnd();
     glColor3f(1, 1, 1);

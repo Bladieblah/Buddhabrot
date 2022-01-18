@@ -4,10 +4,10 @@
 // Fractal size
 // #define size_x 5120
 // #define size_y 2881
-#define size_x 6048
-#define size_y 3928
-// #define size_x 1400
-// #define size_y 801
+// #define size_x 6048
+// #define size_y 3928
+#define size_x 1400
+#define size_y 801
 #define size_x2 2600
 #define size_y2 2000
 
@@ -115,11 +115,18 @@ PixelCoord ttp(TextureCoord textureCoord);
 
 bool operator==(const FractalCoord& p1, const FractalCoord& p2);
 bool operator!=(const FractalCoord& p1, const FractalCoord& p2);
+
 MandelCoord operator+(const MandelCoord& m1, const MandelCoord& m2);
 MandelCoord operator-(const MandelCoord& m1, const MandelCoord& m2);
 MandelCoord operator/(const MandelCoord& m1, const MandelCoord& m2);
 MandelCoord operator*(const MandelCoord& m1, const MandelCoord& m2);
+
+MandelCoord operator+(const MandelCoord& m, const double& d);
+MandelCoord operator-(const MandelCoord& m, const double& d);
+MandelCoord operator*(const MandelCoord& m, const double& d);
+
 MandelCoord mandelSin(MandelCoord m);
+MandelCoord mandelCos(MandelCoord m);
 MandelCoord mandelDiv(MandelCoord m1, MandelCoord m2);
 
 #endif

@@ -272,10 +272,23 @@ MandelCoord operator-(const MandelCoord& m1, const MandelCoord& m2) {
 }
 
 MandelCoord operator/(const MandelCoord& m1, const MandelCoord& m2) {
+    double norm = 1. / (m2.x * m2.x + m2.y * m2.y);
     return {
-        (m1.x * m2.x + m1.y * m2.y) / (m1.x * m1.x + m2.y * m2.y), 
-        (m1.y * m2.x - m1.x * m2.y) / (m2.x * m2.x + m2.y * m2.y)
+        (m1.x * m2.x + m1.y * m2.y) * norm, 
+        (m1.y * m2.x - m1.x * m2.y) * norm
     };
+}
+
+MandelCoord operator+(const MandelCoord& m, const double& d) {
+    return {m.x + d, m.y};
+}
+
+MandelCoord operator-(const MandelCoord& m, const double& d) {
+    return {m.x - d, m.y};
+}
+
+MandelCoord operator*(const MandelCoord& m, const double& d) {
+    return {m.x * d, m.y * d};
 }
 
 MandelCoord mandelSin(MandelCoord m) {
@@ -283,4 +296,11 @@ MandelCoord mandelSin(MandelCoord m) {
     double emz = exp(-m.y);
     
     return {0.5 * sin(m.x) * (epz + emz), 0.5 * cos(m.x) * (epz - emz)};
+}
+
+MandelCoord mandelCos(MandelCoord m) {
+    double epz = exp(m.y);
+    double emz = exp(-m.y);
+    
+    return {0.5 * cos(m.x) * (epz + emz), 0.5 * sin(m.x) * (epz - emz)};
 }
