@@ -518,8 +518,10 @@ MandelCoord mutateParticle(int thread, int particle) {
 
     if (UNI() < 0.95) {
         MandelCoord dz = getDerivative(thread);
-        result.x = particles[thread][particle].x + RANDN() * scaleDouble * dz.x;
-        result.y = particles[thread][particle].y + RANDN() * scaleDouble * dz.y;
+        double dNorm = 5 * scaleDouble / sqrt(dz.x * dz.x + dz.y * dz.y);
+
+        result.x = particles[thread][particle].x + RANDN() * dz.x * dNorm;
+        result.y = particles[thread][particle].y + RANDN() * dz.y * dNorm;
         // result.x = 2 * particles[thread][particle].x + RANDN() * fmin(scale, 1e-1);
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
@@ -587,11 +589,21 @@ void _mandelbrot(int thread) {
     int si, sj;
     double a, b;
     Particle result;
+    MandelCoord mc;
     bool _segmented = segmented;
     segmented = false;
 
 	for (int i=0; i<iterations * particleCount; i++) {
-        if (targetedRandom) {
+        if (limitParticles) {
+            mc = ttm2({
+                2. * UNI() - 1.,
+                2. * UNI() - 1.
+            });
+
+            a = mc.x;
+            b = mc.y;
+        }
+        else if (targetedRandom) {
             si = UNI() * sampleSizeX;
             sj = UNI() * sampleSizeY;
 
@@ -1498,6 +1510,9 @@ void keyPressed2(unsigned char key, int x, int y) {
             limitParticles = !limitParticles;
             fprintf(stderr, "Set limitParticles to %d\n", limitParticles);
             break;
+        case 'i':
+            initParticles();
+            break;
         case 'm':
             drawScale *= 1.1;
             drawPower = 1. / drawScale;
@@ -1669,6 +1684,11 @@ void display2() {
         glEnd();
 
         glDisable (GL_TEXTURE_2D);
+
+        if (showParticles) {
+            drawParticles();
+        }
+
         glPopMatrix();
 
         if (shouldDrawGrid) {
@@ -1677,10 +1697,6 @@ void display2() {
 
         if (mouse_state_2 == GLUT_DOWN && transform2) {
             drawBox2();
-        }
-
-        if (showParticles) {
-            drawParticles();
         }
 
         glFlush();
