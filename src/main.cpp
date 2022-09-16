@@ -75,24 +75,32 @@ bool showContrib = false;
 bool updateTexture = true;
 bool onlyBackground = false;
 bool limitParticles = false;
+bool symmetric = true;
 
 bool move2 = true;
 
 
-#define thresholdCount 4
+#define thresholdCount 3
 
 #ifdef WAVE_FRACTAL
 int32_t thresholds[thresholdCount] = {20, 50, 100, 200};
 #else
-int32_t thresholds[thresholdCount] = {250, 5000, 32000, 64000};
+int32_t thresholds[thresholdCount] = {250, 5000, 32000};//, 64000};
 #endif
 
 double thresholdColours[thresholdCount * 3] = {
     0.3, 0.0, 0.5,
     0.0, 0.5, 0.3,
     0.6, 0.5, 0.0,
-    0.1, 0.0, 0.2,
+    // 0.1, 0.0, 0.2,
 };
+
+// double thresholdColours[thresholdCount * 3] = {
+//     0.3, 0.3, 0.5,
+//     0.0, 0.5, 0.3,
+//     0.6, 0.5, 0.0,
+//     0.1, 0.0, 0.2,
+// };
 // #define thresholdCount 6
 // int32_t thresholds[thresholdCount] = {250, 5000, 30000, 31000, 32000, 33000};
 // double thresholdColours[thresholdCount * 3] = {
@@ -146,6 +154,8 @@ double *ySamples;
 int sampleSizeX = 6000;
 int sampleSizeY = 5000;
 
+double mutateScale = 1.;
+
 // Points to track
 typedef struct Particle {
     double x, y;
@@ -180,19 +190,13 @@ int countUnique(FractalCoord *pixels, int len) {
     return count;
 }
 
-void mandelStep(MandelCoord *z, MandelCoord *c) {
-    double temp = z->x * z->x - z->y * z->y + c->x;
-
-    z->y = 2 * z->x * z->y + c->y;
-    z->x = temp;
+MandelCoord mandelStep(MandelCoord z, MandelCoord c) {
+    return z * z + c + mandelSin(z * z + c * c);
 }
 
 
 MandelCoord mandelDeriv(MandelCoord z, MandelCoord dz) {
-    return {
-        2 * (z.x * dz.x - z.y * dz.y) + 1,
-        2 * (z.x * dz.y + z.y * dz.x)
-    };
+    return z * dz * 2. + 1 + z * mandelCos(z) * dz * 2;
 }
 
 MandelCoord waveStep(MandelCoord z) {
@@ -229,12 +233,12 @@ Particle converge(double a, double b, int thread, int particleIndex) {
     double c2 = a*a + b*b;
     int stepLimit = 2;
 
-#ifndef WAVE_FRACTAL
-    // Check if c in main or secondary bulb
-    if (256.0*c2*c2 - 96.0*c2 + 32.0*a - 3.0 < 0.0 || 16.0*(c2 + 2.0 * a + 1.0) - 1.0 < 0.0) {
-        return result;
-    }
-#endif
+// #ifndef WAVE_FRACTAL
+//     // Check if c in main or secondary bulb
+//     if (256.0*c2*c2 - 96.0*c2 + 32.0*a - 3.0 < 0.0 || 16.0*(c2 + 2.0 * a + 1.0) - 1.0 < 0.0) {
+//         return result;
+//     }
+// #endif
     
     uint64_t j=0;
 
@@ -248,7 +252,7 @@ Particle converge(double a, double b, int thread, int particleIndex) {
 #ifdef WAVE_FRACTAL
             z = waveStep(z);
 #else
-            mandelStep(&z, &c);
+            z = mandelStep(z, c);
 #endif
 
             if (z.x * z.x + z.y * z.y > escape) {
@@ -308,51 +312,53 @@ Particle converge(double a, double b, int thread, int particleIndex) {
                     }
                 }
 
-                for (int k=0; k<j; k++) {
-                    fc = mtfMirror(path[thread][k]);
+                if (symmetric) {
+                    for (int k=0; k<j; k++) {
+                        fc = mtfMirror(path[thread][k]);
 
-                    if (fc.x < 0 || fc.x >= size_x || fc.y < 0 || fc.y >= size_y) {
-                        continue;
-                    }
+                        if (fc.x < 0 || fc.x >= size_x || fc.y < 0 || fc.y >= size_y) {
+                            continue;
+                        }
 
-                    ppath[thread][hitCount] = {fc.x, fc.y};
-                    ind2 = size_x * fc.y + fc.x;
-                    if (segmented) {
-                        if ((int)(fc.x / particleX) * particleCountSqrt + (int)(fc.y / particleY) == particleIndex) {
+                        ppath[thread][hitCount] = {fc.x, fc.y};
+                        ind2 = size_x * fc.y + fc.x;
+                        if (segmented) {
+                            if ((int)(fc.x / particleX) * particleCountSqrt + (int)(fc.y / particleY) == particleIndex) {
+                                hitCount++;
+                                impact += weight / (1. + fractal2[ind2]);
+                            }
+                            else {
+                                pixCount++;
+                            }
+                        }
+                        else {
                             hitCount++;
                             impact += weight / (1. + fractal2[ind2]);
                         }
-                        else {
-                            pixCount++;
-                        }
-                    }
-                    else {
-                        hitCount++;
-                        impact += weight / (1. + fractal2[ind2]);
-                    }
 
-                    fractal2[ind2] += weight;
+                        fractal2[ind2] += weight;
 
-
-                    if (showDifference) {
-                        frameFractal2[ind2] += weight;
-                    }
-                    
-                    if (fractal2[ind2] > maxVal) {
-                        maxVal = fractal2[ind2]; 
-                    }
-
-                    for (int l=i; l<=i; l++) {
-                        ind1 = thresholdCount * ind2 + l;
-                        // impact += 1. / (0.01 + fractal[ind1]);
-                        fractal[ind1] += 1;
 
                         if (showDifference) {
-                            frameFractal[ind1] += 1;
+                            frameFractal2[ind2] += weight;
                         }
                         
-                        if (fractal[ind1] > maxVals[l]) {
-                            maxVals[l] = fractal[ind1]; 
+                        if (fractal2[ind2] > maxVal) {
+                            maxVal = fractal2[ind2]; 
+                        }
+
+                        for (int l=i; l<=i; l++) {
+                            ind1 = thresholdCount * ind2 + l;
+                            // impact += 1. / (0.01 + fractal[ind1]);
+                            fractal[ind1] += 1;
+
+                            if (showDifference) {
+                                frameFractal[ind1] += 1;
+                            }
+                            
+                            if (fractal[ind1] > maxVals[l]) {
+                                maxVals[l] = fractal[ind1]; 
+                            }
                         }
                     }
                 }
@@ -518,10 +524,10 @@ MandelCoord mutateParticle(int thread, int particle) {
 
     if (UNI() < 0.95) {
         MandelCoord dz = getDerivative(thread);
-        double dNorm = 5 * scaleDouble / sqrt(dz.x * dz.x + dz.y * dz.y);
+        double dNorm = 5 * scaleDouble / sqrt(dz.x * dz.x + dz.y * dz.y) * mutateScale;
 
-        result.x = particles[thread][particle].x + RANDN() * dz.x * dNorm;
-        result.y = particles[thread][particle].y + RANDN() * dz.y * dNorm;
+        result.x = particles[thread][particle].x + RANDN() * sqrt(fabs(dz.x)) * dNorm;
+        result.y = particles[thread][particle].y + RANDN() * sqrt(fabs(dz.y)) * dNorm;
         // result.x = 2 * particles[thread][particle].x + RANDN() * fmin(scale, 1e-1);
         // result.y = 2 * particles[thread][particle].y + RANDN() * fmin(scale, 1e-1);
     }
@@ -575,10 +581,10 @@ void _metrobrot(int thread) {
                 continue;
             }
 
-            particles[thread][i].impact *= 0.95;
-            prob = result.score / particles[thread][i].score;
+            particles[thread][i].score *= 0.98;
+            prob = exp(-result.score / particles[thread][i].score);
 
-            if (UNI() < prob) {
+            if (UNI() > prob) {
                 particles[thread][i] = result;
             }
         }
@@ -893,7 +899,7 @@ void _drawPath(MandelCoord z, MandelCoord mc) {
 #ifdef WAVE_FRACTAL
         z = waveStep(z);
 #else
-        mandelStep(&z, &mc);
+        z = mandelStep(z, mc);
 #endif
 
         if (z.x * z.x + z.y * z.y > 25) {
@@ -925,7 +931,7 @@ void drawPath() {
     z = waveStep(z);
 #else
     dz = mandelDeriv(z, dz);
-    mandelStep(&z, &mc);
+    z = mandelStep(z, mc);
 #endif
     
     glColor3f(1, 1, 0);
@@ -935,7 +941,7 @@ void drawPath() {
 #ifdef WAVE_FRACTAL
     z = waveStep(z);
 #else
-    mandelStep(&z, &mc);
+    z = mandelStep(z, mc);
 #endif
 
     glColor3f(1, 1, 1);
@@ -950,7 +956,7 @@ void drawPath() {
 #ifdef WAVE_FRACTAL
         z = waveStep(z);
 #else
-        mandelStep(&z, &mc);
+        z = mandelStep(z, mc);
 #endif
 
         if (z.x * z.x + z.y * z.y > 25) {
@@ -1437,8 +1443,8 @@ void keyPressed(unsigned char key, int x, int y) {
             viewX1 = 0.;
             viewY1 = 0.;
             viewScale1 = 1.;
-            drawScale = 2.;
-            drawPower = 1. / drawScale;
+            // drawScale = 2.;
+            // drawPower = 1. / drawScale;
             break;
         case 'R':
             clearData();
@@ -1472,7 +1478,23 @@ void keyPressed(unsigned char key, int x, int y) {
         case 'U':
             updateTexture = !updateTexture;
             break;
-        case 'q':
+        case 'S':
+            symmetric = !symmetric;
+            fprintf(stderr, "Set symmetric to %d\n", symmetric);
+            break;
+        case ',':
+            mutateScale /= 1.5;
+            fprintf(stderr, "mutateScale = %.3f", mutateScale);
+            break;
+        case '.':
+            mutateScale *= 1.5;
+            fprintf(stderr, "mutateScale = %.3f", mutateScale);
+            break;
+        case '/':
+            mutateScale = 1;
+            fprintf(stderr, "mutateScale = %.3f", mutateScale);
+            break;
+        case 'Q':
         	cleanup();
         	fprintf(stderr, "\n");
             exit(0);
@@ -1531,11 +1553,6 @@ void keyPressed2(unsigned char key, int x, int y) {
             break;
         case 'a':
             selectRegion2();
-            break;
-        case 'q':
-        	cleanup();
-        	fprintf(stderr, "\n");
-            exit(0);
             break;
         default:
             break;

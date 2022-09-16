@@ -3,11 +3,26 @@
 
 // Fractal size
 // #define size_x 5120
-// #define size_y 2881
+// #define size_y 2880
+
+// Me
 // #define size_x 6048
 // #define size_y 3928
+
+// Lun en ook ook Thek
+// #define size_x 3840
+// #define size_y 2160
+
+// Thek
+// #define size_x 3200
+// #define size_y 1800
+// Ook Thek
+// #define size_x 3360
+// #define size_y 2100
+
 #define size_x 1400
 #define size_y 801
+
 #define size_x2 2600
 #define size_y2 2000
 
